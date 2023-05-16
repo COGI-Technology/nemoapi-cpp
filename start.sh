@@ -1,0 +1,2 @@
+g++ -I ./include/ -I /opt/vcpkg/installed/x64-linux/include/ -o keypair keypair.cpp ./src/dsa.cpp ./src/api/*.cpp -lsodium -lpthread -L/opt/vcpkg/installed/x64-linux/lib/ -lcurl -lssl -lcrypto -pthread -lz
+./keypair
