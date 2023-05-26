@@ -1,9 +1,6 @@
 #ifndef DSA_H
 #define DSA_H
 
-#include <string>
-#include <cstring>
-#include "sodium.h"
 #include "utils.h"
 #define PRV_SIZE    crypto_sign_ed25519_SEEDBYTES
 #define PUB_SIZE    crypto_sign_ed25519_PUBLICKEYBYTES

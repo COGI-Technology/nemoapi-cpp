@@ -2,11 +2,17 @@
 #define UTILS_H
 
 #include <string>
+#include <cstring>
+#include <regex>
 #include <sodium.h>
 #include <cassert>
 #include <curl/curl.h>
-#include <iostream>
-#include <regex>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+
+#include <ctime>
+#include <chrono>
+
 #define _assert(exp, msg) assert(((void)msg, exp))
 
 using namespace std;
@@ -47,27 +53,22 @@ inline struct curl_slist* curl_slist_extend(struct curl_slist* des, const struct
 inline struct URLComponents urlparse(string url) {
     struct URLComponents ret;
     
-    // // Regular expression pattern for parsing URLs
-    // regex pattern(R"(^(?:(\w+):\/\/)?([^\/:]+)(?::(\d+))?([^\?\#]*)(?:\?([^#]*))?(?:#(.*))?$)");
+    // Regular expression pattern for parsing URLs
+    regex pattern(R"(^(?:(\w+):\/\/)?([^\/:]+)(?::(\d+))?([^\?\#]*)(?:\?([^#]*))?(?:#(.*))?$)");
     
-    // // Match results
-    // smatch match;
+    // Match results
+    smatch match;
     
-    // // Execute the regular expression search on the URL string
-    // if (regex_search(url, match, pattern)) {
-    //     // Extract components from the match results
-    //     ret.protocol = match[1];
-    //     ret.host = match[2];
-    //     ret.port = match[3];
-    //     ret.path = match[4];
-    //     ret.query = match[5];
-    //     ret.fragment = match[6];
-    // }
-    std::regex path_pattern(R"(([^\?\#]*))");
-    std::smatch matches;
-    std::regex_search(url, matches, path_pattern);
-    // ret.path = matches[1].str();
-    ret.path = "/api/v2/hotwallet/balance";
+    // Execute the regular expression search on the URL string
+    if (regex_search(url, match, pattern)) {
+        // Extract components from the match results
+        ret.protocol = match[1];
+        ret.host = match[2];
+        ret.port = match[3];
+        ret.path = match[4];
+        ret.query = match[5];
+        ret.fragment = match[6];
+    }
     return ret;
 }
 
@@ -121,7 +122,7 @@ inline struct nemoapi_memory* base64_decode(const struct nemoapi_memory* encoded
             sodium_base64_VARIANT_ORIGINAL
     ) == 0, "base64_decode: decoding error");
 
-    struct nemoapi_memory *ret = new nemoapi_memory;
+    struct nemoapi_memory *ret = new nemoapi_memory{nullptr, 0};
     ret->data = raw;
     ret->length = raw_len;
     return ret;
@@ -151,7 +152,7 @@ inline struct nemoapi_memory* combine(
     const struct nemoapi_memory* a,
     const struct nemoapi_memory* b
 ) {
-    struct nemoapi_memory* ret = new nemoapi_memory;
+    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
     ret->length = a->length + b->length;
     uint8_t* data = new uint8_t[ret->length];
 
@@ -162,8 +163,8 @@ inline struct nemoapi_memory* combine(
     return ret;
 }
 
-inline struct nemoapi_memory* nemoapi_memory_init(const unsigned char* str, size_t str_len) {
-    struct nemoapi_memory* ret = new nemoapi_memory;
+inline struct nemoapi_memory* nemoapi_memory_from_str(const unsigned char* str, size_t str_len) {
+    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
     uint8_t* data = new uint8_t[str_len];
     memcpy(data, str, str_len);
     memset(data + str_len, 0, len(data) - str_len);
@@ -172,8 +173,43 @@ inline struct nemoapi_memory* nemoapi_memory_init(const unsigned char* str, size
     return ret;
 }
 
-inline struct nemoapi_memory* nemoapi_memory_init(const char* str) {
-    auto ret = nemoapi_memory_init(reinterpret_cast<const unsigned char *>(str), strlen(str));
+inline struct nemoapi_memory* nemoapi_memory_from_str(const char* str) {
+    auto ret = nemoapi_memory_from_str(reinterpret_cast<const unsigned char *>(str), strlen(str));
+    return ret;
+}
+
+template<typename T>
+inline rapidjson::Value vector_to_rapidjson_value(vector<T> arr, rapidjson::MemoryPoolAllocator<>& allocator) {
+    rapidjson::Value ret(rapidjson::kArrayType);
+
+    for (const auto& e: arr) {
+        rapidjson::Value val(e, allocator);
+        ret.PushBack(val, allocator);
+    }
+
+    return ret;
+}
+
+inline void replaceAll(string& str, const string old_s, const string new_s) {
+    size_t pos = 0;
+
+    while ((pos = str.find(old_s, pos)) != string::npos) {
+        str.replace(pos, old_s.length(), new_s);
+        pos += new_s.length();
+    }
+}
+
+inline struct nemoapi_memory* json_decode(rapidjson::Document& doc) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    string decoded(buffer.GetString());
+    
+    replaceAll(decoded, "/", "\\/");
+    
+    struct nemoapi_memory* ret = nemoapi_memory_from_str(decoded.c_str());
+
     return ret;
 }
 

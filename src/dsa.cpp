@@ -1,9 +1,9 @@
 #include "nemoapi.h"
 
 EDDSA::EDDSA(struct nemoapi_memory* prv = nullptr, struct nemoapi_memory* pub = nullptr):
-    _prv(new nemoapi_memory)
-    ,_pub(new nemoapi_memory)
-    ,_sk(new nemoapi_memory)
+    _prv(new nemoapi_memory{nullptr, 0})
+    ,_pub(new nemoapi_memory{nullptr, 0})
+    ,_sk(new nemoapi_memory{nullptr, 0})
 {
     _prv->data = new uint8_t[PRV_SIZE];
     _prv->length = PRV_SIZE;
@@ -54,21 +54,24 @@ string EDDSA::pub_as_base64(){
 
 struct nemoapi_memory* EDDSA::sign(const struct nemoapi_memory* m){
     uint8_t* mh = new uint8_t[MH_SIZE];
-    unsigned char out[crypto_hash_sha256_BYTES];
+    
     _assert(crypto_hash_sha256(
         mh,
         (const unsigned char *) m->data,
-        m->length) > 0,
+        m->length) >= 0,
         "Failed crypto_hash_sha256"
     );
         
     unsigned long long sm_size = S_SIZE + MH_SIZE;
     uint8_t* sm = new uint8_t[sm_size];
-    _assert(crypto_sign(sm, &sm_size, mh, (unsigned long long)MH_SIZE, _sk->data) > 0, "Failed crypto_sign");
-    struct nemoapi_memory* ret = new nemoapi_memory;
+
+    _assert(crypto_sign(sm, &sm_size, mh, (unsigned long long)MH_SIZE, _sk->data) >= 0, "Failed crypto_sign");
+
+    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
     ret->data = new uint8_t[S_SIZE];
     ret->length = S_SIZE;
-    memcpy(ret->data, sm, S_SIZE);
+    concat(ret->data, sm, 0, S_SIZE);
+    
     delete[] sm;
     delete[] mh;
     return ret;
@@ -92,7 +95,7 @@ bool EDDSA::verify(const struct nemoapi_memory* m, const struct nemoapi_memory* 
 EDDSA* EDDSA::generate(){
     uint8_t* buf = new uint8_t[PRV_SIZE];
     randombytes_buf(buf, PRV_SIZE);
-    struct nemoapi_memory* prv = new nemoapi_memory;
+    struct nemoapi_memory* prv = new nemoapi_memory{nullptr, 0};
     prv->data = buf;
     prv->length = PRV_SIZE;
     return new EDDSA(prv);
