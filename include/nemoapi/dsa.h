@@ -9,24 +9,28 @@
 #define MH_SIZE     crypto_hash_sha256_BYTES
 
 using namespace std;
+
+namespace Nemo
+{
 class EDDSA{
     public:
-        EDDSA(struct nemoapi_memory* prv, struct nemoapi_memory* pub);
-        ~EDDSA();
+        EDDSA(const uint8_t* prv = nullptr, const uint8_t* pub = nullptr);
+        virtual ~EDDSA() = default;
     
     public:
-        static EDDSA* from_prv(struct nemoapi_memory* prv);
-        static EDDSA* from_pub(struct nemoapi_memory* pub);
+        static EDDSA* from_prv(const uint8_t* prv);
+        static EDDSA* from_pub(const uint8_t* pub);
         string prv_as_base64();
         string pub_as_base64();
-        struct nemoapi_memory* sign(const struct nemoapi_memory* m);
-        bool verify(const struct nemoapi_memory* m, const struct nemoapi_memory* s);
+        void sign(const uint8_t* m, size_t m_len, uint8_t* s, size_t* s_len);
+        bool verify(const uint8_t* m, size_t m_len, const uint8_t* s, size_t s_len);
         static EDDSA* generate();
     
     private:
-        struct nemoapi_memory* _prv;
-        struct nemoapi_memory* _pub;
-        struct nemoapi_memory* _sk;
+        unique_ptr<uint8_t[]> prv_;
+        unique_ptr<uint8_t[]> pub_;
+        unique_ptr<uint8_t[]> sk_;
 };
+} // namespace Nemo
 
 #endif

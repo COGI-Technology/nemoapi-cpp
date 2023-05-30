@@ -1,102 +1,80 @@
 #include "nemoapi.h"
 
-EDDSA::EDDSA(struct nemoapi_memory* prv = nullptr, struct nemoapi_memory* pub = nullptr):
-    _prv(new nemoapi_memory{nullptr, 0})
-    ,_pub(new nemoapi_memory{nullptr, 0})
-    ,_sk(new nemoapi_memory{nullptr, 0})
+namespace Nemo
 {
-    _prv->data = new uint8_t[PRV_SIZE];
-    _prv->length = PRV_SIZE;
-    
-    _pub->data = new uint8_t[PUB_SIZE];
-    _pub->length = PUB_SIZE;
-
-    _sk->data = new uint8_t[SK_SIZE];
-    _sk->length = SK_SIZE;
-
+EDDSA::EDDSA(const uint8_t* prv, const uint8_t* pub):
+    prv_(make_unique<uint8_t[]>(PRV_SIZE))
+    ,pub_(make_unique<uint8_t[]>(PUB_SIZE))
+    ,sk_(make_unique<uint8_t[]>(SK_SIZE))
+{
     if(prv != nullptr){
-        _prv = prv;
-        crypto_sign_seed_keypair(_pub->data, _sk->data, _prv->data);
+        memcpy(prv_.get(), prv, PRV_SIZE);
+        crypto_sign_seed_keypair(pub_.get(), sk_.get(), prv_.get());
         return;
     }
 
     if(pub != nullptr){
-        _pub = pub;
+        memcpy(pub_.get(), pub, PUB_SIZE);
     }
 
     _assert(prv != nullptr || pub != nullptr, "Invalid prv, pub");
 }
 
-EDDSA::~EDDSA(){
-    free(_prv);
-    free(_pub);
-    free(_sk);
-    _prv = nullptr;
-    _pub = nullptr;
-    _sk = nullptr;
-};
-
-EDDSA* EDDSA::from_prv(struct nemoapi_memory* prv){
+EDDSA* EDDSA::from_prv(const uint8_t* prv){
     return new EDDSA(prv);
 }
 
-EDDSA* EDDSA::from_pub(struct nemoapi_memory* pub){
+EDDSA* EDDSA::from_pub(const uint8_t* pub){
     return new EDDSA(nullptr, pub);
 }
 
 string EDDSA::prv_as_base64(){
-    return base64_encode(_prv);
+    return base64_encode(prv_.get(), PRV_SIZE);
 }
 
 string EDDSA::pub_as_base64(){
-    return base64_encode(_pub);
+    return base64_encode(pub_.get(), PUB_SIZE);
 }
 
-struct nemoapi_memory* EDDSA::sign(const struct nemoapi_memory* m){
-    uint8_t* mh = new uint8_t[MH_SIZE];
+void EDDSA::sign(const uint8_t* m, size_t m_len, uint8_t* s, size_t* s_len){
+    *s_len = S_SIZE;
+    if (s == nullptr)
+        return;
+
+    unique_ptr<uint8_t[]> mh = make_unique<uint8_t[]>(MH_SIZE);
     
     _assert(crypto_hash_sha256(
-        mh,
-        (const unsigned char *) m->data,
-        m->length) >= 0,
+        mh.get(),
+        (const unsigned char *) m,
+        m_len) >= 0,
         "Failed crypto_hash_sha256"
     );
         
     unsigned long long sm_size = S_SIZE + MH_SIZE;
-    uint8_t* sm = new uint8_t[sm_size];
+    unique_ptr<uint8_t[]> sm = make_unique<uint8_t[]>(sm_size);
 
-    _assert(crypto_sign(sm, &sm_size, mh, (unsigned long long)MH_SIZE, _sk->data) >= 0, "Failed crypto_sign");
+    _assert(crypto_sign(sm.get(), &sm_size, mh.get(), (unsigned long long)MH_SIZE, sk_.get()) >= 0, "Failed crypto_sign");
 
-    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
-    ret->data = new uint8_t[S_SIZE];
-    ret->length = S_SIZE;
-    concat(ret->data, sm, 0, S_SIZE);
-    
-    delete[] sm;
-    delete[] mh;
-    return ret;
+    s = (uint8_t*)realloc(s, S_SIZE);
+    memcpy(s, sm.get(), S_SIZE);
 }
 
-bool EDDSA::verify(const struct nemoapi_memory* m, const struct nemoapi_memory* s){
-    if (s->length != S_SIZE)
+bool EDDSA::verify(const uint8_t* m, size_t m_len, const uint8_t* s, size_t s_len){
+    if (s_len != S_SIZE)
         return false;
     unsigned long long mh_size = MH_SIZE;
-    uint8_t* mh = new uint8_t[mh_size];
-    _assert(crypto_hash_sha256(mh, reinterpret_cast<const uint8_t *>(m->data), (unsigned long long)m->length) > 0, "Failed crypto_hash_sha256");
-    uint8_t* sm = new uint8_t[S_SIZE + mh_size];
-    memcpy(sm, s, S_SIZE);
-    memcpy(sm+S_SIZE, mh, m->length);
-    bool ret = crypto_sign_open(mh, &mh_size, sm, S_SIZE + MH_SIZE, _pub->data) > 0;
-    delete[] sm;
-    delete[] mh;
+    unique_ptr<uint8_t[]> mh = make_unique<uint8_t[]>(MH_SIZE);
+    _assert(crypto_hash_sha256(mh.get(), m, (unsigned long long)m_len) > 0, "Failed crypto_hash_sha256");
+    unique_ptr<uint8_t[]> sm = make_unique<uint8_t[]>(S_SIZE + mh_size);
+    memcpy(sm.get(), s, S_SIZE);
+    memcpy(sm.get()+S_SIZE, mh.get(), m_len);
+    bool ret = crypto_sign_open(mh.get(), &mh_size, sm.get(), S_SIZE + MH_SIZE, pub_.get()) > 0;
     return ret;
 }
 
 EDDSA* EDDSA::generate(){
-    uint8_t* buf = new uint8_t[PRV_SIZE];
-    randombytes_buf(buf, PRV_SIZE);
-    struct nemoapi_memory* prv = new nemoapi_memory{nullptr, 0};
-    prv->data = buf;
-    prv->length = PRV_SIZE;
-    return new EDDSA(prv);
+    unique_ptr<uint8_t[]> buf = make_unique<uint8_t[]>(PRV_SIZE);
+    randombytes_buf(buf.get(), PRV_SIZE);
+    return new EDDSA(buf.get());
+}
 }

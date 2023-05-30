@@ -6,7 +6,7 @@
 using namespace std;
 
 void generate() {
-    EDDSA* dsa = EDDSA::generate();
+    Nemo::EDDSA* dsa = Nemo::EDDSA::generate();
     printf("Private Key: %s\n", dsa->prv_as_base64().c_str());
     printf("Public key: %s\n", dsa->pub_as_base64().c_str());
     delete dsa;

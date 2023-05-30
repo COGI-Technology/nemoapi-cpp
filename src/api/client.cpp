@@ -1,239 +1,275 @@
 #include "nemoapi.h"
 
-APIClient::APIClient(
-    APIConfiguration* config,
-    CURL* curl,
-    const struct nemoapi_memory* identification
-): _config(nullptr), _curl(nullptr), _headers(nullptr) {
-    if (curl == nullptr)
-        curl = curl_easy_init();
-
-    auto base_ua = BASE_USER_AGENT;
-    struct nemoapi_memory* user_agent = nullptr;
-    if (identification == nullptr) {
-        auto id = nemoapi_memory_from_str("Unknow");
-        user_agent = combine(base_ua, id);
-        free(id);
-    } else {
-        user_agent = combine(base_ua, identification);
-    }
-        
-    _config = config;
-    _curl = curl;
-    set_default_header(user_agent);
-
-    free(user_agent);
-    free(base_ua);
+namespace Nemo
+{
+ APIClient::APIClient(
+    const uint8_t* host,
+    size_t host_len,
+    const uint8_t* key_id,
+    size_t key_id_len,
+    const uint8_t* public_key,
+    size_t public_key_len,
+    const uint8_t* private_key,
+    size_t private_key_len
+):
+    host_(make_unique<uint8_t[]>(host_len + 1)),
+    host_len_(host_len),
+    key_id_(make_unique<uint8_t[]>(key_id_len + 1)),
+    key_id_len_(key_id_len),
+    public_key_(make_unique<uint8_t[]>(public_key_len + 1)),
+    public_key_len_(public_key_len),
+    private_key_(make_unique<uint8_t[]>(private_key_len + 1)),
+    private_key_len_(private_key_len)
+{
+    memcpy(host_.get(), host, host_len);
+    host_.get()[host_len] = '\0';
+    memcpy(key_id_.get(), key_id, key_id_len);
+    key_id_.get()[key_id_len] = '\0';
+    memcpy(public_key_.get(), public_key, public_key_len);
+    public_key_.get()[public_key_len] = '\0';
+    memcpy(private_key_.get(), private_key, private_key_len);
+    private_key_.get()[private_key_len] = '\0';
 }
 
-APIClient::~APIClient() {
-    free(_config->host);
-    free(_config->key_id);
-    free(_config->public_key);
-    free(_config->private_key);
-    delete _config;
-
-    curl_slist_free_all(_headers);
-    curl_easy_cleanup(_curl);
-
-    _config = nullptr;
-    _curl =nullptr;
-    _headers = nullptr;
-}
-
-rapidjson::Document APIClient::call_api(
-    const struct nemoapi_memory* resource_path,
-    CURLoption method,
-    uint8_t auth_setting,
-    const struct curl_slist* header_params,
-    const struct nemoapi_memory* path_params,
-    const struct nemoapi_memory* post_parmas,
-    long timeout
+struct APIV2Signed* APIClient::sign(
+    const uint8_t* resource_path,
+    size_t resource_path_len,
+    const uint8_t* body,
+    size_t body_len,
+    unsigned long access_time
 ) {
-    struct nemoapi_memory* url = combine(_config->host, resource_path);
-    if (path_params != nullptr) {
-        struct nemoapi_memory* tmp = combine(url, path_params);
-        free(url);
-        url = tmp;
+    unique_ptr<uint8_t[]> url(combine(host_.get(), host_len_, resource_path, resource_path_len));
+    string access_id = urlparse(url.get()).path;
+    string access_time_in_str = to_string(access_time);
+    auto message_hash_length = access_id.length() + 1 + access_time_in_str.length() + 1 + body_len;
+    unique_ptr<uint8_t[]> message_hash = make_unique<uint8_t[]>(message_hash_length + 1);
+    size_t cur_offset = 0;
+
+    // message_hash += access_id;
+    memcpy(message_hash.get() + cur_offset, access_id.c_str(), access_id.length());
+    cur_offset += access_id.length();
+
+    // message_hash += ":";
+    message_hash[cur_offset] = COLON_IN_HEX;
+    cur_offset += 1;
+
+    // message_hash += access_time;
+    memcpy(message_hash.get() + cur_offset, access_time_in_str.c_str(), access_time_in_str.length());
+    cur_offset += access_time_in_str.length();
+
+    // message_hash += ":";
+    message_hash[cur_offset] = COLON_IN_HEX;
+    cur_offset += 1;
+
+    memcpy(message_hash.get() + cur_offset, body, body_len);
+    cur_offset += body_len;
+    message_hash.get()[cur_offset] = '\0';
+
+    unique_ptr<EDDSA> dsa(EDDSA::from_prv(private_key_.get()));
+
+    size_t s_size = S_SIZE;
+    unique_ptr<uint8_t[]> s = make_unique<uint8_t[]>(s_size + 1);
+    dsa->sign(message_hash.get(), message_hash_length, s.get(), &s_size);
+    s.get()[s_size] = '\0';
+    string sb64 = base64_encode(s.get(), s_size);
+    
+    struct APIV2Signed* ret = new APIV2Signed{nullptr, 0, nullptr, 0, nullptr, 0};
+
+    ret->access_key_id = make_unique<uint8_t[]>(key_id_len_ + 1);
+    memcpy(ret->access_key_id.get(), key_id_.get(), key_id_len_ + 1);
+    ret->access_key_id_len = key_id_len_;
+
+    ret->access_signature = unique_ptr<uint8_t[]>(to_bytes(sb64.c_str(), sb64.length()));
+    ret->access_signature_len = s_size;
+
+    ret->access_time = make_unique<uint8_t[]>(access_time_in_str.length() + 1);
+    memcpy(ret->access_time.get(), access_time_in_str.c_str(), access_time_in_str.length() + 1);
+    ret->access_time_len = access_time_in_str.length();
+
+    return ret;
+}
+
+CURLClient::CURLClient(
+    const uint8_t* host,
+    size_t host_len,
+    const uint8_t* key_id,
+    size_t key_id_len,
+    const uint8_t* public_key,
+    size_t public_key_len,
+    const uint8_t* private_key,
+    size_t private_key_len,
+    CURL* curl,
+    const uint8_t* identification,
+    size_t identification_len
+):
+    APIClient(host, host_len, key_id, key_id_len, public_key, public_key_len, private_key, private_key_len),
+    curl_(curl),
+    headers_(nullptr)
+{
+    if (curl == nullptr)
+        curl_ = curl_easy_init();
+
+    unique_ptr<uint8_t[]> _an(to_bytes(ANONYMOUS_USER_AGENT, ANONYMOUS_USER_AGENT_SIZE));
+    if (identification == nullptr || identification_len <= 0) {
+        identification = _an.get();
+        identification_len = ANONYMOUS_USER_AGENT_SIZE;
     }
 
-    printf("url: %s\n", reinterpret_cast<char*>(url->data));
+    string _ba = string("User-Agent: ") + BASE_USER_AENT_NEMO_NAMESPACE;
+    size_t _id_len = _ba.length() + identification_len;
+    unique_ptr<uint8_t[]> _id = make_unique<uint8_t[]>(_id_len + 1);
+    memcpy(_id.get(), _ba.c_str(), _ba.length());
+    memcpy(_id.get() + _ba.length(), identification, identification_len);
+    _id.get()[_id_len] = '\0';
 
-    curl_easy_setopt(_curl, CURLOPT_URL, url->data);
-    curl_easy_setopt(_curl, method, 1L);
+    set_default_header(_id.get());
+
+}
+
+CURLClient::~CURLClient() {
+    curl_slist_free_all(headers_);
+    curl_easy_cleanup(curl_);
+
+    headers_ = nullptr;
+    curl_ = nullptr;
+}
+
+void CURLClient::set_default_header(const uint8_t* header) {
+    headers_ = curl_slist_append(headers_, reinterpret_cast<const char*>(header));
+}
+
+size_t CURLClient::callback(void *data, size_t size, size_t nmemb, void *clientp) {
+    size_t realsize = size * nmemb;
+    struct memory *mem = (struct memory *)clientp;
+    
+    uint8_t *ptr = (uint8_t*)realloc(mem->data, mem->size + realsize + 1);
+    if(ptr == NULL)
+        return 0;  /* out of memory! */
+    
+    mem->data = ptr;
+    memcpy(&(mem->data[mem->size]), data, realsize);
+    mem->size += realsize;
+    mem->data[mem->size] = 0;
+    
+    return realsize;
+}
+
+void CURLClient::update_params_for_auth(
+    uint8_t* url,
+    size_t url_len,
+    struct curl_slist* headers,
+    uint8_t auth_settings,
+    const Nemo::APIV2Signed* signature
+) {
+    if (auth_settings & NemoApiV2Auth) {
+        _assert(signature != nullptr, "invalid signature");
+
+        string access_key_id =
+            string(ACCESS_KEY_ID) + string(": ") + reinterpret_cast<char*>(signature->access_key_id.get());
+        headers = curl_slist_append(headers, access_key_id.c_str());
+        string access_time =
+            string(ACCESS_TIME) + string(": ") + reinterpret_cast<char*>(signature->access_time.get());
+        headers = curl_slist_append(headers, access_time.c_str());
+        string access_signature =
+            string(ACCESS_SIGNATURE) + string(": ") + reinterpret_cast<char*>(signature->access_signature.get());
+        headers = curl_slist_append(headers, access_signature.c_str());
+    }
+}
+
+
+rapidjson::Document CURLClient::call_api(
+    const uint8_t* resource_path,
+    size_t resource_path_len,
+    int method,
+    uint8_t auth_setting,
+    const uint8_t* body_data,
+    size_t body_len,
+    const Nemo::APIV2Signed* signature,
+    long timeout,
+    void* argv[],
+    size_t argc
+) {
+    auto _method = static_cast<CURLoption>(method);
+
+    auto _url_len = host_len_ + resource_path_len;
+    unique_ptr<uint8_t[]> url(combine(host_.get(), host_len_, resource_path, resource_path_len));
+    if (argc > 1 && argv[0] != nullptr) {
+        size_t _pp_len = *static_cast<size_t*>(argv[1]);
+        if (_pp_len > 0) {
+            uint8_t* p = url.get();
+            p = (uint8_t*)realloc(p, _url_len + _pp_len + 1);
+            uint8_t* _path_params = static_cast<uint8_t*>(argv[0]);
+            memcpy(p + _url_len, _path_params, _pp_len);
+            _url_len += _pp_len;
+            p[_url_len] = '\0';
+        }
+    }
 
     struct curl_slist* headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_extend(headers, header_params);
-    headers = curl_slist_extend(headers, _headers);
+    if (argc > 2 && argv[2] != nullptr) {
+        struct curl_slist* header_params = static_cast<struct curl_slist*>(argv[2]);
+        headers = curl_slist_extend(headers, header_params);
+    }
+    headers = curl_slist_extend(headers, headers_);
     
-    update_params_for_auth(url, nullptr, headers, path_params, post_parmas, auth_setting);
-    curl_easy_setopt(_curl, CURLOPT_HTTPHEADER, headers);
+    update_params_for_auth(url.get(), _url_len, headers, auth_setting, signature);
 
-    if (post_parmas != nullptr) {
-        curl_easy_setopt(_curl, CURLOPT_POSTFIELDS, reinterpret_cast<char*>(post_parmas->data));
+    curl_easy_reset(curl_);
+    curl_easy_setopt(curl_, CURLOPT_URL, url.get());
+    curl_easy_setopt(curl_, _method, 1L);
+    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
+
+    if (body_data == nullptr || body_len <= 0) {
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, "{}");
+    } else {
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, body_data);
     }
     
-    struct nemoapi_memory* chunk = new nemoapi_memory{nullptr, 0};
+    struct memory chunk = {nullptr, 0};
 
-    curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, callback);
-    curl_easy_setopt(_curl, CURLOPT_WRITEDATA, chunk);
+    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, callback);
+    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, (void*)&chunk);
 
-    CURLcode res = curl_easy_perform(_curl);
+    CURLcode res = curl_easy_perform(curl_);
     if (res != CURLE_OK) {
-        free(url);
+        if (chunk.data != nullptr) {
+            free(chunk.data);
+        }
         curl_slist_free_all(headers);
-        curl_easy_reset(_curl);
-        free(chunk);
         throw runtime_error(curl_easy_strerror(res));
     }
 
-    printf("response: %s\n", reinterpret_cast<char*>(chunk->data));
+    unique_ptr<uint8_t[]> _res = make_unique<uint8_t[]>(chunk.size + 1);
+    if (chunk.data != nullptr) {
+        memcpy(_res.get(), chunk.data, chunk.size);
+        _res.get()[chunk.size] = '\0';
+        free(chunk.data);
+    }
 
     rapidjson::Document response;
-    response.Parse(reinterpret_cast<char*>(chunk->data));
+    response.Parse(reinterpret_cast<char*>(_res.get()));    
 
     bool missing_params = !response.HasMember("params");
     if (!response.HasMember("status")
         || response["status"].GetInt() < 0
         || (missing_params && !response.HasMember("uuid"))) {
-        throw runtime_error(reinterpret_cast<char*>(chunk->data));
+        curl_slist_free_all(headers);
+        throw runtime_error(reinterpret_cast<char*>(_res.get()));
     }
     
     if (!missing_params && response["params"].IsObject()) {
         auto response_params = response["params"].GetObject();
         if (response_params.HasMember("error")) {
-            free(url);
             curl_slist_free_all(headers);
-            curl_easy_reset(_curl);
-            free(chunk);
             throw runtime_error(response_params["error"].GetString());
         }
         if (response_params.HasMember("err")) {
-            free(url);
             curl_slist_free_all(headers);
-            curl_easy_reset(_curl);
-            free(chunk);
             throw runtime_error(response_params["err"].GetString());
         }
     }
-
-    free(url);
     curl_slist_free_all(headers);
-    curl_easy_reset(_curl);
-    free(chunk);
     return response;
 }
-
-void APIClient::set_default_header(const struct nemoapi_memory* header) {
-    _headers = curl_slist_append(_headers, reinterpret_cast<char*>(header->data));
-}
-
-size_t APIClient::callback(void *data, size_t size, size_t nmemb, void *clientp) {
-    size_t realsize = size * nmemb;
-    struct nemoapi_memory *mem = (struct nemoapi_memory *)clientp;
-    
-    uint8_t* ptr = (uint8_t*)realloc(mem->data, mem->length + realsize + 1);
-    if(ptr == NULL)
-        return 0;  /* out of memory! */
-    
-    mem->data = ptr;
-    memcpy(&(mem->data[mem->length]), data, realsize);
-    mem->length += realsize;
-    mem->data[mem->length] = 0;
-    
-    return realsize;
-}
-
-void APIClient::update_params_for_auth(
-    struct nemoapi_memory* url,
-    struct nemoapi_memory* method,
-    struct curl_slist* headers,
-    const struct nemoapi_memory* query_params,
-    const struct nemoapi_memory* body,
-    uint8_t auth_settings
-) {
-    if (auth_settings & NemoApiV2Auth) {
-        auto millisec_since_epoch = chrono::duration_cast<chrono::milliseconds>
-            (chrono::system_clock::now().time_since_epoch()).count();
-        // auto millisec_since_epoch = 123456;
-        struct APIV2Signed* res = sign(url, body, millisec_since_epoch);
-        headers = curl_slist_append(headers, reinterpret_cast<char*>(res->access_key_id->data));
-        free(res->access_key_id);
-        headers = curl_slist_append(headers, reinterpret_cast<char*>(res->access_signature->data));
-        free(res->access_signature);
-        headers = curl_slist_append(headers, reinterpret_cast<char*>(res->access_time->data));
-        free(res->access_time);
-        delete res;
-    }
-}
-
-struct APIV2Signed* APIClient::sign(
-    const struct nemoapi_memory* url,
-    const struct nemoapi_memory* body,
-    unsigned long access_time
-) {
-    string access_id = urlparse(url).path;
-    
-    struct APIV2Signed* ret = new APIV2Signed{nullptr, nullptr, nullptr};
-    
-    if (body == nullptr) {
-        body = nemoapi_memory_from_str("{}");
-    }
-
-    string access_time_in_str = to_string(access_time);
-    auto message_hash_length = access_id.length() + 1 + access_time_in_str.length() + 1 + body->length;
-    uint8_t* message_hash = new uint8_t[message_hash_length];
-
-    concat(message_hash, reinterpret_cast<const uint8_t*>(access_id.c_str()), 0, access_id.length());
-    message_hash[access_id.length()] = 0x3a; // hex of :
-    concat(
-        message_hash,
-        reinterpret_cast<const uint8_t*>(access_time_in_str.c_str()),
-        access_id.length() + 1,
-        access_time_in_str.length()
-    );
-    message_hash[access_id.length() + 1 + access_time_in_str.length()] = 0x3a;
-    concat(
-        message_hash,
-        body->data,
-        access_id.length() + 1 + access_time_in_str.length() + 1,
-        body->length
-    );
-    memset(message_hash + message_hash_length, 0, len(message_hash) - message_hash_length);
-
-    struct nemoapi_memory* mh = new nemoapi_memory{nullptr, 0};
-    mh->data = message_hash;
-    mh->length = message_hash_length;
-    
-    printf("message hash: %s\n", reinterpret_cast<char*>(mh->data));
-
-    EDDSA* dsa = EDDSA::from_prv(_config->private_key);
-    struct nemoapi_memory* access_signature = dsa->sign(mh);
-    struct nemoapi_memory* tmp = nemoapi_memory_from_str(base64_encode(access_signature).c_str());
-    free(access_signature);
-    
-    struct nemoapi_memory* base = BASE_ACCESS_SIGNATURE;
-    access_signature = combine(base, tmp);
-    free(tmp);
-    free(base);
-
-    base = BASE_ACCESS_KEY_ID;
-    struct nemoapi_memory* access_key_id = combine(base, _config->key_id);
-    free(base);
-
-    base = BASE_ACCESS_TIME;
-    tmp = nemoapi_memory_from_str(access_time_in_str.c_str());
-    struct nemoapi_memory* access_time_im = combine(base, tmp);
-    free(tmp);
-    free(base);
-
-    ret->access_key_id = access_key_id;
-    ret->access_signature = access_signature;
-    ret->access_time = access_time_im;
-
-    free(mh);
-    delete dsa;
-
-    return ret;
-}
+} // namespace Nemo

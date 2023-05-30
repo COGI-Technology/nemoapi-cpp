@@ -1,11 +1,19 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 BridgeApi::~BridgeApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
-rapidjson::Document::Array BridgeApi::pause(const vector<const char*> networks, vector<int> chain_ids) {
+rapidjson::Document::Array BridgeApi::pause(
+    const vector<const char*> networks,
+    vector<int> chain_ids,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     if (networks.size() > 0) {
@@ -24,36 +32,50 @@ rapidjson::Document::Array BridgeApi::pause(const vector<const char*> networks, 
         params.AddMember("chainIds", ns, allocator);
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    params.Accept(writer);
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/bridge/pause");
+    uint8_t resource_path[] = "/bridge/pause";
+    size_t path_size = 13;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         
         rapidjson::Document::Array ret = res["params"].GetArray();
-        free(data);
-        free(path);
         return ret;
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Array BridgeApi::unpause(const vector<const char*> networks, vector<int> chain_ids) {
+rapidjson::Document::Array BridgeApi::unpause(
+    const vector<const char*> networks,
+    vector<int> chain_ids,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     if (networks.size() > 0) {
@@ -72,36 +94,51 @@ rapidjson::Document::Array BridgeApi::unpause(const vector<const char*> networks
         params.AddMember("chainIds", ns, allocator);
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    params.Accept(writer);
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/bridge/unpause");
+    uint8_t resource_path[] = "/bridge/unpause";
+    size_t path_size = 15;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         
         rapidjson::Document::Array ret = res["params"].GetArray();
-        free(data);
-        free(path);
         return ret;
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Array BridgeApi::block_token(const char* token, const char* network, int chain_id) {
+rapidjson::Document::Array BridgeApi::block_token(
+    const char* token,
+    const char* network,
+    int chain_id,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value t(token, allocator);
@@ -113,36 +150,51 @@ rapidjson::Document::Array BridgeApi::block_token(const char* token, const char*
         params.AddMember("chainId", chain_id, allocator);
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    params.Accept(writer);
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/bridge/block_token");
+    uint8_t resource_path[] = "/bridge/block_token";
+    size_t path_size = 19;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         
         rapidjson::Document::Array ret = res["params"].GetArray();
-        free(data);
-        free(path);
         return ret;
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Array BridgeApi::unblock_token(const char* token, const char* network, int chain_id) {
+rapidjson::Document::Array BridgeApi::unblock_token(
+    const char* token,
+    const char* network,
+    int chain_id,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value t(token, allocator);
@@ -154,31 +206,40 @@ rapidjson::Document::Array BridgeApi::unblock_token(const char* token, const cha
         params.AddMember("chainId", chain_id, allocator);
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    params.Accept(writer);
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/bridge/unblock_token");
+    uint8_t resource_path[] = "/bridge/unblock_token";
+    size_t path_size = 21;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         
         rapidjson::Document::Array ret = res["params"].GetArray();
-        free(data);
-        free(path);
         return ret;
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
+} // namespace Nemo

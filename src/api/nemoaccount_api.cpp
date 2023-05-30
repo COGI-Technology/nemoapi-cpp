@@ -1,64 +1,103 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 NemoAccountApi::~NemoAccountApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
-rapidjson::Document::Array NemoAccountApi::get_link(const char* main_account) {
+rapidjson::Document::Array NemoAccountApi::get_link(
+    const char* main_account,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
 
     rapidjson::Value _main_account(main_account, allocator);
     params.AddMember("main_account", _main_account, allocator);
-    
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/account/get_link");
+
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/account/get_link";
+    size_t path_size = 17;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         return res["params"].GetArray();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Object NemoAccountApi::get_nemo_wallet(const char* sub_account) {
+rapidjson::Document::Object NemoAccountApi::get_nemo_wallet(
+    const char* sub_account,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
 
     rapidjson::Value _sub_account(sub_account, allocator);
     params.AddMember("sub_account", _sub_account, allocator);
     
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/account/get_nemo_wallet");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/account/get_nemo_wallet";
+    size_t path_size = 24;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         return res["params"].GetObject();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
+} // namespace Nemo

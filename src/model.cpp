@@ -1,5 +1,7 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 AccountBalance::AccountBalance() {}
 AccountBalance::~AccountBalance() {}
 
@@ -23,7 +25,7 @@ HotwalletAllowance::HotwalletAllowance() {}
 HotwalletAllowance::~HotwalletAllowance() {}
 
 void HotwalletAllowance::from_obj(rapidjson::Document::Object data) {
-    spender = data["tx_hash"].GetString();
+    spender = data["spender"].GetString();
     amount = data["amount"].GetString();
 }
 
@@ -67,3 +69,5 @@ void NemoIdAccount::from_obj(rapidjson::Document::Object data) {
         }
     }
 }
+} // namespace Nemo
+

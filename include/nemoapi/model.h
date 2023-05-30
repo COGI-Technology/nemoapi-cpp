@@ -6,6 +6,9 @@
 
 using namespace std;
 
+namespace Nemo
+{
+
 enum InternalTransactionKind {
     TRANSACTION_INTERNAL = 207,
     TRANSACTION_ONCHAIN = 203,
@@ -107,5 +110,6 @@ class NemoIdAccount: public BaseModel {
     public:
         void from_obj(rapidjson::Document::Object data);
 };
+} // namespace Nemo
 
 #endif

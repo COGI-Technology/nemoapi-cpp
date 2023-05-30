@@ -1,62 +1,101 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 SubgraphApi::~SubgraphApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
-rapidjson::Value::Object SubgraphApi::call(rapidjson::Value::Object params) {
+rapidjson::Document::Object SubgraphApi::call(
+    rapidjson::Document::Object params,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
+    rapidjson::Document doc(rapidjson::kObjectType);
+    auto& allocator = doc.GetAllocator();
+    rapidjson::Value val(params);
+    doc.CopyFrom(val, allocator);
+
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(doc, &data_size));
+
+    uint8_t resource_path[] = "/subgraph/call";
+    size_t path_size = 14;
+    
+    try {
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
+            NEMOAPI_POST,
+            NemoApiV2Auth,
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
+        );
+        return res.GetObject();
+    } catch (const std::exception& e) {
+        throw;
+    }
+}
+
+rapidjson::Document::Object SubgraphApi::get_total_volume(
+    rapidjson::Document::Object params,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document doc(rapidjson::kObjectType);
     auto& allocator = doc.GetAllocator();
     rapidjson::Value val(params);
     doc.CopyFrom(val, allocator);
     
-    struct nemoapi_memory* data = json_decode(doc);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/subgraph/call");
-    
-    try {
-        auto res = _client->call_api(
-            path,
-            NEMOAPI_POST,
-            NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
-        );
-        free(data);
-        free(path);
-        return res.GetObject();
-    } catch (const std::exception& e) {
-        free(data);
-        free(path);
-        throw;
-    }
-}
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(doc, &data_size));
 
-rapidjson::Value::Object SubgraphApi::get_total_volume(rapidjson::Value::Object params) {
-    rapidjson::Document doc(rapidjson::kObjectType);
-    auto& allocator = doc.GetAllocator();
-    rapidjson::Value val(params);
-    doc.CopyFrom(val, allocator);
-    
-    struct nemoapi_memory* data = json_decode(doc);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/subgraph/getTotalVolume");
+    uint8_t resource_path[] = "/subgraph/getTotalVolume";
+    size_t path_size = 24;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         return res.GetObject();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
+} // namespace Nemo

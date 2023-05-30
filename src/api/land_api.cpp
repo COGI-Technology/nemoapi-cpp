@@ -1,8 +1,10 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 LandApi::~LandApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
 string LandApi::mint(
@@ -12,7 +14,10 @@ string LandApi::mint(
     const char* land_x,
     const char* land_y,
     rapidjson::Document::Object metadata,
-    const char* callback
+    const char* callback,
+    void* argv[],
+    size_t argc,
+    long timeout
 ) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
@@ -30,25 +35,38 @@ string LandApi::mint(
     rapidjson::Value _callback(callback, allocator);
     params.AddMember("callback", _callback, allocator);
     params.AddMember("data", metadata, allocator);
-    
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/land/mint");
+
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/land/mint";
+    size_t path_size = 10;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
@@ -60,7 +78,10 @@ string LandApi::request_mint(
     const char* land_x,
     const char* land_y,
     rapidjson::Document::Object metadata,
-    const char* callback
+    const char* callback,
+    void* argv[],
+    size_t argc,
+    long timeout
 ) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
@@ -79,24 +100,37 @@ string LandApi::request_mint(
     params.AddMember("callback", _callback, allocator);
     params.AddMember("data", metadata, allocator);
     
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/land/request_mint");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/land/request_mint";
+    size_t path_size = 18;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
@@ -136,89 +170,143 @@ rapidjson::Document LandApi::build_batch_mint(
     return ret;
 }
 
-rapidjson::Document::Array LandApi::request_mints(rapidjson::Document::Array lands) {
+rapidjson::Document::Array LandApi::request_mints(
+    rapidjson::Document::Array lands,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
 
     params.AddMember("lands", lands, allocator);
 
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/land/request_mints");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/land/request_mints";
+    size_t path_size = 19;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
-        
         return res["uuid"].GetArray();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Array LandApi::mints(rapidjson::Document::Array lands) {
+rapidjson::Document::Array LandApi::mints(
+    rapidjson::Document::Array lands,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
 
     params.AddMember("lands", lands, allocator);
 
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/land/mints");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/land/mints";
+    size_t path_size = 11;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         
         return res["uuid"].GetArray();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
 
-rapidjson::Document::Array LandApi::request_cancelbuys(rapidjson::Document::Array lands) {
+rapidjson::Document::Array LandApi::request_cancelbuys(
+    rapidjson::Document::Array lands,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
 
     params.AddMember("lands", lands, allocator);
 
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/land/request_cancelbuys");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/land/request_cancelbuys";
+    size_t path_size = 24;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
         
         return res["params"].GetArray();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
+} // namespace Nemo

@@ -4,6 +4,7 @@
 #include <string>
 #include <cstring>
 #include <regex>
+#include <memory>
 #include <sodium.h>
 #include <cassert>
 #include <curl/curl.h>
@@ -17,11 +18,8 @@
 
 using namespace std;
 
-struct nemoapi_memory {
-    uint8_t* data;
-    size_t length;
-};
-
+namespace Nemo 
+{
 struct URLComponents {
     string protocol;
     string host;
@@ -30,26 +28,6 @@ struct URLComponents {
     string query;
     string fragment;
 };
-
-inline void free(struct nemoapi_memory* memory) {
-    if (memory != nullptr) {
-        if (memory->data != nullptr) {
-            delete[] memory->data;
-        }
-        delete memory;
-        memory = nullptr;
-    }
-}
-
-inline struct curl_slist* curl_slist_extend(struct curl_slist* des, const struct curl_slist* src) {
-    const struct curl_slist *node = src;
-    while (node != NULL) {
-        des = curl_slist_append(des, node->data);
-        node = node->next;
-    }
-    return des;
-}
-
 inline struct URLComponents urlparse(string url) {
     struct URLComponents ret;
     
@@ -72,122 +50,107 @@ inline struct URLComponents urlparse(string url) {
     return ret;
 }
 
-inline struct URLComponents urlparse(const struct nemoapi_memory* url) {
-    return urlparse(string(reinterpret_cast<char*>(url->data)));
+inline struct URLComponents urlparse(const uint8_t* url) {
+    return urlparse(string(reinterpret_cast<const char*>(url)));
 }
 
-inline string base64_encode(const struct nemoapi_memory* raw){
-    const size_t ret_max_len = sodium_base64_encoded_len(raw->length, sodium_base64_VARIANT_ORIGINAL);
-    char* ret = new char[ret_max_len];
+inline string base64_encode(const uint8_t* raw, size_t raw_len){
+    const size_t ret_max_len = sodium_base64_encoded_len(raw_len, sodium_base64_VARIANT_ORIGINAL);
+    unique_ptr<char[]> ret = make_unique<char[]>(ret_max_len);
     _assert(sodium_bin2base64(
-            ret,
+            ret.get(),
             ret_max_len,
-            raw->data,
-            raw->length,
+            raw,
+            raw_len,
             sodium_base64_VARIANT_ORIGINAL
     ) != NULL, "Failed sodium_bin2base64");
-    return string(ret);
+    return string(ret.get());
 }
 
-inline size_t calc_decode_len(const struct nemoapi_memory* b64_input) {
+inline size_t calc_decode_len(const char* b64_input, size_t len) {
     size_t padding = 0;
 
-    if (b64_input->length > 0 && b64_input->data[b64_input->length-1] == '=') {
+    if (len > 0 && b64_input[len-1] == '=') {
         padding++;
-        if (b64_input->length > 1 && b64_input->data[b64_input->length-2] == '=') {
+        if (len > 1 && b64_input[len-2] == '=') {
             padding++;
         }
     }
 
-    return (b64_input->length * 3 / 4) - padding;
+    return (len * 3 / 4) - padding;
 }
 
-inline struct nemoapi_memory* base64_decode(const struct nemoapi_memory* encoded) {
+inline void base64_decode(const char* encoded, size_t encoded_len, uint8_t* raw, size_t* raw_len) {
     // Determine the maximum possible length of the decoded string:
-    size_t raw_len = calc_decode_len(encoded);
+    *raw_len = calc_decode_len(encoded, encoded_len);
     _assert(raw_len > 0, "base64_decode: error getting max length");
+    if (raw == nullptr)
+        return;
 
     // Allocate a buffer for the decoded data:
-    uint8_t* raw = new uint8_t[raw_len];
+    raw = (uint8_t*)realloc(raw, *raw_len);
 
     // Decode the data:
     _assert(sodium_base642bin(
             raw,
-            raw_len,
-            reinterpret_cast<const char*>(encoded->data),
-            encoded->length,
+            *raw_len,
+            encoded,
+            encoded_len,
             nullptr,
-            &raw_len,
+            raw_len,
             nullptr,
             sodium_base64_VARIANT_ORIGINAL
-    ) == 0, "base64_decode: decoding error");
+    ) >= 0, "base64_decode: decoding error");
+}
 
-    struct nemoapi_memory *ret = new nemoapi_memory{nullptr, 0};
-    ret->data = raw;
-    ret->length = raw_len;
+inline uint8_t* to_bytes(const char* data, size_t size, bool include_null_character = true) {
+    uint8_t* ret = nullptr;
+    if (include_null_character) {
+        ret = new uint8_t[size + 1];
+        ret[size] = '\0';
+    }
+    memcpy(ret, data, size);
     return ret;
 }
 
-inline void concat(uint8_t* dest, const uint8_t* src, size_t offset, size_t src_len) {
-    if (dest == nullptr || src == nullptr) {
-        return;
-    }
-    if (offset < 0 || src_len <= 0) {
-        return;
-    }
-
-    memcpy(dest + offset, src, src_len);
+inline uint8_t* to_bytes(const char* data) {
+    return to_bytes(data, strlen(data), true);
 }
 
-inline size_t len(const uint8_t* buffer) {
-    size_t length = 0;
-    while (*buffer++)
-    {
-        ++length;
-    }
-    return length;
-}
-
-inline struct nemoapi_memory* combine(
-    const struct nemoapi_memory* a,
-    const struct nemoapi_memory* b
+/**
+ * @brief Concatenates two uint8_t arrays into a single array.
+ * 
+ * @param a - Pointer to the first array
+ * @param a_len - Length of the first array
+ * @param b - Pointer to the second array
+ * @param b_len - Length of the second array
+ * 
+ * @return A new uint8_t array containing the concatenated data.
+ * This memory is allocated using new operator, so make sure to deallocate it when done.
+ */
+inline uint8_t* combine(
+    const void* a,
+    size_t a_len,
+    const void* b,
+    size_t b_len
 ) {
-    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
-    ret->length = a->length + b->length;
-    uint8_t* data = new uint8_t[ret->length];
+    // Allocate new memory for the combined array
+    auto ret_len = a_len + b_len;
+    uint8_t* ret = new uint8_t[ret_len + 1];
 
-    concat(data, a->data, 0, a->length);
-    concat(data, b->data, a->length, b->length);
-    memset(data + ret->length, 0, len(data) - ret->length);
-    ret->data = data;
+    // Copy the contents of 'a' and 'b' into the newly allocated memory
+    memcpy(ret, a, a_len);
+    memcpy(ret + a_len, b, b_len);
+    ret[ret_len] = '\0';
+
+    // Return the newly created and concatenated array
     return ret;
 }
 
-inline struct nemoapi_memory* nemoapi_memory_from_str(const unsigned char* str, size_t str_len) {
-    struct nemoapi_memory* ret = new nemoapi_memory{nullptr, 0};
-    uint8_t* data = new uint8_t[str_len];
-    memcpy(data, str, str_len);
-    memset(data + str_len, 0, len(data) - str_len);
-    ret->data = data;
-    ret->length = str_len;
-    return ret;
-}
-
-inline struct nemoapi_memory* nemoapi_memory_from_str(const char* str) {
-    auto ret = nemoapi_memory_from_str(reinterpret_cast<const unsigned char *>(str), strlen(str));
-    return ret;
-}
-
-template<typename T>
-inline rapidjson::Value vector_to_rapidjson_value(vector<T> arr, rapidjson::MemoryPoolAllocator<>& allocator) {
-    rapidjson::Value ret(rapidjson::kArrayType);
-
-    for (const auto& e: arr) {
-        rapidjson::Value val(e, allocator);
-        ret.PushBack(val, allocator);
-    }
-
-    return ret;
+inline unsigned long timestamp() {
+    auto millisec_since_epoch = chrono::duration_cast<chrono::milliseconds>
+            (chrono::system_clock::now().time_since_epoch()).count();
+    return millisec_since_epoch;
 }
 
 inline void replaceAll(string& str, const string old_s, const string new_s) {
@@ -199,7 +162,7 @@ inline void replaceAll(string& str, const string old_s, const string new_s) {
     }
 }
 
-inline struct nemoapi_memory* json_decode(rapidjson::Document& doc) {
+inline uint8_t* json_decode(rapidjson::Document& doc, size_t* decoded_size = nullptr) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
@@ -208,9 +171,22 @@ inline struct nemoapi_memory* json_decode(rapidjson::Document& doc) {
     
     replaceAll(decoded, "/", "\\/");
     
-    struct nemoapi_memory* ret = nemoapi_memory_from_str(decoded.c_str());
+    uint8_t* ret = to_bytes(decoded.c_str(), decoded.length());
+    if (decoded_size != nullptr) {
+        *decoded_size = decoded.length();
+    }
 
     return ret;
 }
+
+inline struct curl_slist* curl_slist_extend(struct curl_slist* des, const struct curl_slist* src) {
+    const struct curl_slist *node = src;
+    while (node != NULL) {
+        des = curl_slist_append(des, node->data);
+        node = node->next;
+    }
+    return des;
+}
+} // namespace Nemo
 
 #endif

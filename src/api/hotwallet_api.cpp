@@ -1,11 +1,14 @@
 #include "nemoapi.h"
+#include <iostream>
 
+namespace Nemo
+{
 HotwalletApi::~HotwalletApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
-AccountBalance HotwalletApi::balance(const char* account) {
+AccountBalance HotwalletApi::balance(const char* account, void* argv[], size_t argc, long timeout) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value acct(account, allocator);
@@ -15,38 +18,55 @@ AccountBalance HotwalletApi::balance(const char* account) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/hotwallet/balance");
+    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+
+    uint8_t resource_path[] = "/hotwallet/balance";
+    size_t path_size = 18;
     AccountBalance ret;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                buffer.GetLength(),
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            buffer.GetLength(),
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         ret.from_obj(res["params"].GetObject());
-        // ret.account = account;
-        free(data);
-        free(path);
+        ret.account = string(account);
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
     
     return ret;
 }
 
-InternalTransaction HotwalletApi::charge(const char* account, unsigned long amount) {
+InternalTransaction HotwalletApi::charge(
+    const char* account,
+    const char* amount,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value acct(account, allocator);
-    rapidjson::Value amt(to_string(amount).c_str(), allocator);
+    rapidjson::Value amt(amount, allocator);
     params.AddMember("account", acct, allocator);
     params.AddMember("amount", amt, allocator);
 
@@ -54,39 +74,55 @@ InternalTransaction HotwalletApi::charge(const char* account, unsigned long amou
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/hotwallet/charge");
+    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+
+    uint8_t resource_path[] = "/hotwallet/charge";
+    size_t path_size = 17;
     InternalTransaction ret;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                buffer.GetLength(),
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            buffer.GetLength(),
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         ret.from_obj(res["params"].GetObject());
-        ret.account = account;
-        ret.kind = TRANSACTION_WITHDRAW;
-        free(data);
-        free(path);
+        ret.account = string(account);
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
     
     return ret;
 }
 
-InternalTransaction HotwalletApi::award(const char* account, unsigned long amount) {
+InternalTransaction HotwalletApi::award(
+    const char* account,
+    const char* amount,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value acct(account, allocator);
-    rapidjson::Value amt(to_string(amount).c_str(), allocator);
+    rapidjson::Value amt(amount, allocator);
     params.AddMember("account", acct, allocator);
     params.AddMember("amount", amt, allocator);
 
@@ -94,35 +130,50 @@ InternalTransaction HotwalletApi::award(const char* account, unsigned long amoun
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/hotwallet/award");
+    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+
+    uint8_t resource_path[] = "/hotwallet/award";
+    size_t path_size = 16;
     InternalTransaction ret;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                buffer.GetLength(),
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            buffer.GetLength(),
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
         ret.from_obj(res["params"].GetObject());
-        ret.account = account;
-        ret.kind = TRANSACTION_DEPOSIT;
-        free(data);
-        free(path);
+        ret.account = string(account);
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
     
     return ret;
 }
 
-HotwalletAllowance HotwalletApi::get_allowance(const char* account) {
+HotwalletAllowance HotwalletApi::get_allowance(
+    const char* account,
+    void* argv[],
+    size_t argc,
+    long timeout
+) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
     rapidjson::Value acct(account, allocator);
@@ -132,29 +183,42 @@ HotwalletAllowance HotwalletApi::get_allowance(const char* account) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    printf("%s\n", buffer.GetString());
-    struct nemoapi_memory* data = nemoapi_memory_from_str(buffer.GetString());
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/hotwallet/get_allowance");
+    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+
+    uint8_t resource_path[] = "/hotwallet/get_allowance";
+    size_t path_size = 24;
     HotwalletAllowance ret;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                buffer.GetLength(),
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            buffer.GetLength(),
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
+
         ret.from_obj(res["params"].GetObject());
-        ret.account = account;
-        free(data);
-        free(path);
+        ret.account = string(account);
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
     
     return ret;
 }
+} // namespace Nemo

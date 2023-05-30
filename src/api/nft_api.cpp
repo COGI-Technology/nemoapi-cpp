@@ -1,14 +1,19 @@
 #include "nemoapi.h"
 
+namespace Nemo
+{
 NFTApi::~NFTApi() {
-    delete _client;
-    _client = nullptr;
+    delete client_;
+    client_ = nullptr;
 }
 
 string NFTApi::mint(
     const char* recipient,
     rapidjson::Document::Object metadata,
-    const char* callback
+    const char* callback,
+    void* argv[],
+    size_t argc,
+    long timeout
 ) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
@@ -18,26 +23,38 @@ string NFTApi::mint(
     rapidjson::Value _callback(callback, allocator);
     params.AddMember("callback", _callback, allocator);
     params.AddMember("data", metadata, allocator);
-    
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/nft/mint");
+
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/nft/mint";
+    size_t path_size = 9;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
-
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
@@ -45,7 +62,10 @@ string NFTApi::mint(
 string NFTApi::request_mint(
     const char* recipient,
     rapidjson::Document::Object metadata,
-    const char* callback
+    const char* callback,
+    void* argv[],
+    size_t argc,
+    long timeout
 ) {
     rapidjson::Document params(rapidjson::kObjectType);
     auto& allocator = params.GetAllocator();
@@ -56,25 +76,39 @@ string NFTApi::request_mint(
     params.AddMember("callback", _callback, allocator);
     params.AddMember("data", metadata, allocator);
     
-    struct nemoapi_memory* data = json_decode(params);
-    struct nemoapi_memory* path = nemoapi_memory_from_str("/nft/request_mint");
+    size_t data_size;
+    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+
+    uint8_t resource_path[] = "/nft/request_mint";
+    size_t path_size = 17;
     
     try {
-        auto res = _client->call_api(
-            path,
+        unique_ptr<APIV2Signed> signature(
+            client_->sign(
+                resource_path,
+                path_size,
+                data.get(),
+                data_size,
+                timestamp()
+            )
+        );
+
+        auto res = client_->call_api(
+            resource_path,
+            path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            nullptr,
-            nullptr,
-            data
+            data.get(),
+            data_size,
+            signature.get(),
+            timeout,
+            argv,
+            argc
         );
-        free(data);
-        free(path);
 
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
-        free(data);
-        free(path);
         throw;
     }
 }
+} // namespace Nemo
