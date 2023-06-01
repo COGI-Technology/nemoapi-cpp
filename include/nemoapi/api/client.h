@@ -52,7 +52,7 @@ class APIClient {
             const uint8_t* private_key,
             size_t private_key_len
         );
-        virtual ~APIClient() = default;
+        virtual ~APIClient();
 
     public:
         virtual rapidjson::Document call_api(
@@ -78,16 +78,16 @@ class APIClient {
         );
 
     protected:
-        unique_ptr<uint8_t[]> host_;
+        uint8_t* host_;
         size_t host_len_;
 
-        unique_ptr<uint8_t[]> key_id_;
+        uint8_t* key_id_;
         size_t key_id_len_;
 
-        unique_ptr<uint8_t[]> public_key_;
+        uint8_t* public_key_;
         size_t public_key_len_;
 
-        unique_ptr<uint8_t[]> private_key_;
+        uint8_t* private_key_;
         size_t private_key_len_;
 };
 

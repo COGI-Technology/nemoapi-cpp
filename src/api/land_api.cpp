@@ -37,7 +37,7 @@ string LandApi::mint(
     params.AddMember("data", metadata, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/land/mint";
     size_t path_size = 10;
@@ -47,7 +47,7 @@ string LandApi::mint(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -58,15 +58,17 @@ string LandApi::mint(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -101,7 +103,7 @@ string LandApi::request_mint(
     params.AddMember("data", metadata, allocator);
     
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/land/request_mint";
     size_t path_size = 18;
@@ -111,7 +113,7 @@ string LandApi::request_mint(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -122,15 +124,17 @@ string LandApi::request_mint(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -182,7 +186,7 @@ rapidjson::Document::Array LandApi::request_mints(
     params.AddMember("lands", lands, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/land/request_mints";
     size_t path_size = 19;
@@ -192,7 +196,7 @@ rapidjson::Document::Array LandApi::request_mints(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -203,15 +207,17 @@ rapidjson::Document::Array LandApi::request_mints(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetArray();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -228,7 +234,7 @@ rapidjson::Document::Array LandApi::mints(
     params.AddMember("lands", lands, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/land/mints";
     size_t path_size = 11;
@@ -238,7 +244,7 @@ rapidjson::Document::Array LandApi::mints(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -249,16 +255,17 @@ rapidjson::Document::Array LandApi::mints(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         return res["uuid"].GetArray();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -275,7 +282,7 @@ rapidjson::Document::Array LandApi::request_cancelbuys(
     params.AddMember("lands", lands, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/land/request_cancelbuys";
     size_t path_size = 24;
@@ -285,7 +292,7 @@ rapidjson::Document::Array LandApi::request_cancelbuys(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -296,16 +303,17 @@ rapidjson::Document::Array LandApi::request_cancelbuys(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         return res["params"].GetArray();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

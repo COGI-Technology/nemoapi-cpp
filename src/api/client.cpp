@@ -12,23 +12,35 @@ namespace Nemo
     const uint8_t* private_key,
     size_t private_key_len
 ):
-    host_(make_unique<uint8_t[]>(host_len + 1)),
+    host_(new uint8_t[host_len + 1]),
     host_len_(host_len),
-    key_id_(make_unique<uint8_t[]>(key_id_len + 1)),
+    key_id_(new uint8_t[key_id_len + 1]),
     key_id_len_(key_id_len),
-    public_key_(make_unique<uint8_t[]>(public_key_len + 1)),
+    public_key_(new uint8_t[public_key_len + 1]),
     public_key_len_(public_key_len),
-    private_key_(make_unique<uint8_t[]>(private_key_len + 1)),
+    private_key_(new uint8_t[private_key_len + 1]),
     private_key_len_(private_key_len)
 {
-    memcpy(host_.get(), host, host_len);
-    host_.get()[host_len] = '\0';
-    memcpy(key_id_.get(), key_id, key_id_len);
-    key_id_.get()[key_id_len] = '\0';
-    memcpy(public_key_.get(), public_key, public_key_len);
-    public_key_.get()[public_key_len] = '\0';
-    memcpy(private_key_.get(), private_key, private_key_len);
-    private_key_.get()[private_key_len] = '\0';
+    memcpy(host_, host, host_len);
+    host_[host_len] = '\0';
+    memcpy(key_id_, key_id, key_id_len);
+    key_id_[key_id_len] = '\0';
+    memcpy(public_key_, public_key, public_key_len);
+    public_key_[public_key_len] = '\0';
+    memcpy(private_key_, private_key, private_key_len);
+    private_key_[private_key_len] = '\0';
+}
+
+APIClient::~APIClient() {
+    delete[] host_;
+    delete[] key_id_;
+    delete[] private_key_;
+    delete[] public_key_;
+
+    host_ = nullptr;
+    key_id_ = nullptr;
+    private_key_ = nullptr;
+    public_key_ = nullptr;
 }
 
 struct APIV2Signed* APIClient::sign(
@@ -38,15 +50,17 @@ struct APIV2Signed* APIClient::sign(
     size_t body_len,
     unsigned long access_time
 ) {
-    unique_ptr<uint8_t[]> url(combine(host_.get(), host_len_, resource_path, resource_path_len));
-    string access_id = urlparse(url.get()).path;
+    uint8_t* url = combine(host_, host_len_, resource_path, resource_path_len);
+    string access_id = urlparse(url).path;
+    delete[] url;
+    
     string access_time_in_str = to_string(access_time);
     auto message_hash_length = access_id.length() + 1 + access_time_in_str.length() + 1 + body_len;
-    unique_ptr<uint8_t[]> message_hash = make_unique<uint8_t[]>(message_hash_length + 1);
+    uint8_t* message_hash = new uint8_t[message_hash_length + 1];
     size_t cur_offset = 0;
 
     // message_hash += access_id;
-    memcpy(message_hash.get() + cur_offset, access_id.c_str(), access_id.length());
+    memcpy(message_hash + cur_offset, access_id.c_str(), access_id.length());
     cur_offset += access_id.length();
 
     // message_hash += ":";
@@ -54,29 +68,31 @@ struct APIV2Signed* APIClient::sign(
     cur_offset += 1;
 
     // message_hash += access_time;
-    memcpy(message_hash.get() + cur_offset, access_time_in_str.c_str(), access_time_in_str.length());
+    memcpy(message_hash + cur_offset, access_time_in_str.c_str(), access_time_in_str.length());
     cur_offset += access_time_in_str.length();
 
     // message_hash += ":";
     message_hash[cur_offset] = COLON_IN_HEX;
     cur_offset += 1;
 
-    memcpy(message_hash.get() + cur_offset, body, body_len);
+    memcpy(message_hash + cur_offset, body, body_len);
     cur_offset += body_len;
-    message_hash.get()[cur_offset] = '\0';
+    message_hash[cur_offset] = '\0';
 
-    unique_ptr<EDDSA> dsa(EDDSA::from_prv(private_key_.get()));
+    EDDSA* dsa = EDDSA::from_prv(private_key_);
 
     size_t s_size = S_SIZE;
-    unique_ptr<uint8_t[]> s = make_unique<uint8_t[]>(s_size + 1);
-    dsa->sign(message_hash.get(), message_hash_length, s.get(), &s_size);
-    s.get()[s_size] = '\0';
-    string sb64 = base64_encode(s.get(), s_size);
+    uint8_t* s = new uint8_t[s_size + 1];
+    dsa->sign(message_hash, message_hash_length, s, &s_size);
+    s[s_size] = '\0';
+    string sb64 = base64_encode(s, s_size);
+    delete dsa;
+    delete[] s;
     
     struct APIV2Signed* ret = new APIV2Signed{nullptr, 0, nullptr, 0, nullptr, 0};
 
     ret->access_key_id = make_unique<uint8_t[]>(key_id_len_ + 1);
-    memcpy(ret->access_key_id.get(), key_id_.get(), key_id_len_ + 1);
+    memcpy(ret->access_key_id.get(), key_id_, key_id_len_ + 1);
     ret->access_key_id_len = key_id_len_;
 
     ret->access_signature = unique_ptr<uint8_t[]>(to_bytes(sb64.c_str(), sb64.length()));
@@ -109,21 +125,23 @@ CURLClient::CURLClient(
     if (curl == nullptr)
         curl_ = curl_easy_init();
 
-    unique_ptr<uint8_t[]> _an(to_bytes(ANONYMOUS_USER_AGENT, ANONYMOUS_USER_AGENT_SIZE));
+    uint8_t* _an = to_bytes(ANONYMOUS_USER_AGENT, ANONYMOUS_USER_AGENT_SIZE);
     if (identification == nullptr || identification_len <= 0) {
-        identification = _an.get();
+        identification = _an;
         identification_len = ANONYMOUS_USER_AGENT_SIZE;
     }
 
     string _ba = string("User-Agent: ") + BASE_USER_AENT_NEMO_NAMESPACE;
     size_t _id_len = _ba.length() + identification_len;
-    unique_ptr<uint8_t[]> _id = make_unique<uint8_t[]>(_id_len + 1);
-    memcpy(_id.get(), _ba.c_str(), _ba.length());
-    memcpy(_id.get() + _ba.length(), identification, identification_len);
-    _id.get()[_id_len] = '\0';
+    uint8_t* _id = new uint8_t[_id_len + 1];
+    memcpy(_id, _ba.c_str(), _ba.length());
+    memcpy(_id + _ba.length(), identification, identification_len);
+    _id[_id_len] = '\0';
 
-    set_default_header(_id.get());
+    set_default_header(_id);
 
+    delete[] _an;
+    delete[] _id;
 }
 
 CURLClient::~CURLClient() {
@@ -192,16 +210,17 @@ rapidjson::Document CURLClient::call_api(
     auto _method = static_cast<CURLoption>(method);
 
     auto _url_len = host_len_ + resource_path_len;
-    unique_ptr<uint8_t[]> url(combine(host_.get(), host_len_, resource_path, resource_path_len));
+    uint8_t* url = combine(host_, host_len_, resource_path, resource_path_len);
+    bool url_use_realloc = false;
     if (argc > 1 && argv[0] != nullptr) {
         size_t _pp_len = *static_cast<size_t*>(argv[1]);
         if (_pp_len > 0) {
-            uint8_t* p = url.get();
-            p = (uint8_t*)realloc(p, _url_len + _pp_len + 1);
+            url = (uint8_t*)realloc(url, _url_len + _pp_len + 1);
             uint8_t* _path_params = static_cast<uint8_t*>(argv[0]);
-            memcpy(p + _url_len, _path_params, _pp_len);
+            memcpy(url + _url_len, _path_params, _pp_len);
             _url_len += _pp_len;
-            p[_url_len] = '\0';
+            url[_url_len] = '\0';
+            url_use_realloc = true;
         }
     }
 
@@ -213,10 +232,12 @@ rapidjson::Document CURLClient::call_api(
     }
     headers = curl_slist_extend(headers, headers_);
     
-    update_params_for_auth(url.get(), _url_len, headers, auth_setting, signature);
+    update_params_for_auth(url, _url_len, headers, auth_setting, signature);
 
     curl_easy_reset(curl_);
-    curl_easy_setopt(curl_, CURLOPT_URL, url.get());
+    curl_easy_setopt(curl_, CURLOPT_URL, url);
+    if (url_use_realloc) free(url);
+    else delete[] url;
     curl_easy_setopt(curl_, _method, 1L);
     curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
 
@@ -240,23 +261,26 @@ rapidjson::Document CURLClient::call_api(
         throw runtime_error(curl_easy_strerror(res));
     }
 
-    unique_ptr<uint8_t[]> _res = make_unique<uint8_t[]>(chunk.size + 1);
+    uint8_t* _res = new uint8_t[chunk.size + 1];
     if (chunk.data != nullptr) {
-        memcpy(_res.get(), chunk.data, chunk.size);
-        _res.get()[chunk.size] = '\0';
+        memcpy(_res, chunk.data, chunk.size);
+        _res[chunk.size] = '\0';
         free(chunk.data);
     }
 
     rapidjson::Document response;
-    response.Parse(reinterpret_cast<char*>(_res.get()));    
+    response.Parse(reinterpret_cast<char*>(_res));    
 
     bool missing_params = !response.HasMember("params");
     if (!response.HasMember("status")
         || response["status"].GetInt() < 0
         || (missing_params && !response.HasMember("uuid"))) {
         curl_slist_free_all(headers);
-        throw runtime_error(reinterpret_cast<char*>(_res.get()));
+        auto err = runtime_error(reinterpret_cast<char*>(_res));
+        delete[] _res;
+        throw err;
     }
+    delete[] _res;
     
     if (!missing_params && response["params"].IsObject()) {
         auto response_params = response["params"].GetObject();

@@ -33,7 +33,7 @@ rapidjson::Document::Array BridgeApi::pause(
     }
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/bridge/pause";
     size_t path_size = 13;
@@ -43,7 +43,7 @@ rapidjson::Document::Array BridgeApi::pause(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -54,17 +54,18 @@ rapidjson::Document::Array BridgeApi::pause(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         rapidjson::Document::Array ret = res["params"].GetArray();
         return ret;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -95,7 +96,7 @@ rapidjson::Document::Array BridgeApi::unpause(
     }
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/bridge/unpause";
     size_t path_size = 15;
@@ -105,7 +106,7 @@ rapidjson::Document::Array BridgeApi::unpause(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -116,17 +117,18 @@ rapidjson::Document::Array BridgeApi::unpause(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         rapidjson::Document::Array ret = res["params"].GetArray();
         return ret;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -151,7 +153,7 @@ rapidjson::Document::Array BridgeApi::block_token(
     }
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/bridge/block_token";
     size_t path_size = 19;
@@ -161,7 +163,7 @@ rapidjson::Document::Array BridgeApi::block_token(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -172,17 +174,18 @@ rapidjson::Document::Array BridgeApi::block_token(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         rapidjson::Document::Array ret = res["params"].GetArray();
         return ret;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -207,7 +210,7 @@ rapidjson::Document::Array BridgeApi::unblock_token(
     }
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/bridge/unblock_token";
     size_t path_size = 21;
@@ -217,7 +220,7 @@ rapidjson::Document::Array BridgeApi::unblock_token(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -228,17 +231,18 @@ rapidjson::Document::Array BridgeApi::unblock_token(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-        
+        delete[] data;
         rapidjson::Document::Array ret = res["params"].GetArray();
         return ret;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

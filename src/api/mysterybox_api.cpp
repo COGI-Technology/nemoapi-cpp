@@ -28,7 +28,7 @@ string MysteryboxApi::mint(
     params.AddMember("data", metadata, allocator);
     
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/mysterybox/mint";
     size_t path_size = 16;
@@ -38,7 +38,7 @@ string MysteryboxApi::mint(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -49,15 +49,17 @@ string MysteryboxApi::mint(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -100,7 +102,7 @@ rapidjson::Document::Array MysteryboxApi::mints(
     params.AddMember("boxs", boxes, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/mysterybox/mints";
     size_t path_size = 17;
@@ -110,7 +112,7 @@ rapidjson::Document::Array MysteryboxApi::mints(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -121,15 +123,17 @@ rapidjson::Document::Array MysteryboxApi::mints(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetArray();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

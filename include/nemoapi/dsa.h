@@ -15,7 +15,7 @@ namespace Nemo
 class EDDSA{
     public:
         EDDSA(const uint8_t* prv = nullptr, const uint8_t* pub = nullptr);
-        virtual ~EDDSA() = default;
+        virtual ~EDDSA();
     
     public:
         static EDDSA* from_prv(const uint8_t* prv);
@@ -27,9 +27,9 @@ class EDDSA{
         static EDDSA* generate();
     
     private:
-        unique_ptr<uint8_t[]> prv_;
-        unique_ptr<uint8_t[]> pub_;
-        unique_ptr<uint8_t[]> sk_;
+        uint8_t* prv_;
+        uint8_t* pub_;
+        uint8_t* sk_;
 };
 } // namespace Nemo
 

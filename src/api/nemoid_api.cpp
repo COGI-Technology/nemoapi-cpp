@@ -26,7 +26,7 @@ NemoIdAccount NemoIdApi::login(
     params.AddMember("redirect_uri", _redirect_uri, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/nemoid/login";
     size_t path_size = 13;
@@ -37,7 +37,7 @@ NemoIdAccount NemoIdApi::login(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -48,7 +48,7 @@ NemoIdAccount NemoIdApi::login(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
@@ -57,9 +57,10 @@ NemoIdAccount NemoIdApi::login(
         );
         ret.from_obj(res["params"].GetObject());
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
-    
+    delete[] data;
     return ret;
 }
 
@@ -79,7 +80,7 @@ NemoIdAccount NemoIdApi::relogin(
     params.AddMember("code_verifier", _code_verifier, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/nemoid/relogin";
     size_t path_size = 15;
@@ -90,7 +91,7 @@ NemoIdAccount NemoIdApi::relogin(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -101,7 +102,7 @@ NemoIdAccount NemoIdApi::relogin(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
@@ -110,9 +111,10 @@ NemoIdAccount NemoIdApi::relogin(
         );
         ret.from_obj(res["params"].GetObject());
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
-    
+    delete[] data;
     return ret;
 }
 
@@ -129,7 +131,7 @@ NemoIdAccount NemoIdApi::user_info(
     params.AddMember("access_token", _access_token, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/nemoid/user_info";
     size_t path_size = 17;
@@ -140,7 +142,7 @@ NemoIdAccount NemoIdApi::user_info(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -151,7 +153,7 @@ NemoIdAccount NemoIdApi::user_info(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
@@ -160,9 +162,10 @@ NemoIdAccount NemoIdApi::user_info(
         );
         ret.from_obj(res["params"].GetObject());
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
-    
+    delete[] data;
     return ret;
 }
 } // namespace Nemo

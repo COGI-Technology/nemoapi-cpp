@@ -56,15 +56,14 @@ inline struct URLComponents urlparse(const uint8_t* url) {
 
 inline string base64_encode(const uint8_t* raw, size_t raw_len){
     const size_t ret_max_len = sodium_base64_encoded_len(raw_len, sodium_base64_VARIANT_ORIGINAL);
-    unique_ptr<char[]> ret = make_unique<char[]>(ret_max_len);
-    _assert(sodium_bin2base64(
-            ret.get(),
-            ret_max_len,
-            raw,
-            raw_len,
-            sodium_base64_VARIANT_ORIGINAL
-    ) != NULL, "Failed sodium_bin2base64");
-    return string(ret.get());
+    char* b64 = new char[ret_max_len];
+    if (sodium_bin2base64(b64, ret_max_len, raw,raw_len, sodium_base64_VARIANT_ORIGINAL) == NULL) {
+        delete[] b64;
+        _assert(false, "Failed sodium_bin2base64");
+    }
+    string ret(b64);
+    delete[] b64;
+    return ret;
 }
 
 inline size_t calc_decode_len(const char* b64_input, size_t len) {

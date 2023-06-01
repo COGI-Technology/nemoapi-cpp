@@ -27,7 +27,7 @@ int OnchainApi::scan_tx(
     params.AddMember("chain_id", chain_id, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/onchain/scan_tx";
     size_t path_size = 16;
@@ -37,7 +37,7 @@ int OnchainApi::scan_tx(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -48,15 +48,17 @@ int OnchainApi::scan_tx(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["status"].GetInt();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

@@ -19,7 +19,7 @@ rapidjson::Document::Object SubgraphApi::call(
     doc.CopyFrom(val, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(doc, &data_size));
+    uint8_t* data = json_decode(doc, &data_size);
 
     uint8_t resource_path[] = "/subgraph/call";
     size_t path_size = 14;
@@ -29,7 +29,7 @@ rapidjson::Document::Object SubgraphApi::call(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -40,15 +40,17 @@ rapidjson::Document::Object SubgraphApi::call(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res.GetObject();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -65,7 +67,7 @@ rapidjson::Document::Object SubgraphApi::get_total_volume(
     doc.CopyFrom(val, allocator);
     
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(doc, &data_size));
+    uint8_t* data = json_decode(doc, &data_size);
 
     uint8_t resource_path[] = "/subgraph/getTotalVolume";
     size_t path_size = 24;
@@ -75,7 +77,7 @@ rapidjson::Document::Object SubgraphApi::get_total_volume(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -86,15 +88,17 @@ rapidjson::Document::Object SubgraphApi::get_total_volume(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res.GetObject();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

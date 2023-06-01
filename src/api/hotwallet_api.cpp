@@ -18,7 +18,8 @@ AccountBalance HotwalletApi::balance(const char* account, void* argv[], size_t a
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+    size_t data_size;
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/hotwallet/balance";
     size_t path_size = 18;
@@ -29,8 +30,8 @@ AccountBalance HotwalletApi::balance(const char* account, void* argv[], size_t a
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
-                buffer.GetLength(),
+                data,
+                data_size,
                 timestamp()
             )
         );
@@ -40,8 +41,8 @@ AccountBalance HotwalletApi::balance(const char* account, void* argv[], size_t a
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
-            buffer.GetLength(),
+            data,
+            data_size,
             signature.get(),
             timeout,
             argv,
@@ -49,7 +50,9 @@ AccountBalance HotwalletApi::balance(const char* account, void* argv[], size_t a
         );
         ret.from_obj(res["params"].GetObject());
         ret.account = string(account);
+        delete[] data;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
     
@@ -74,7 +77,8 @@ InternalTransaction HotwalletApi::charge(
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+    size_t data_size;
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/hotwallet/charge";
     size_t path_size = 17;
@@ -85,8 +89,8 @@ InternalTransaction HotwalletApi::charge(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
-                buffer.GetLength(),
+                data,
+                data_size,
                 timestamp()
             )
         );
@@ -96,8 +100,8 @@ InternalTransaction HotwalletApi::charge(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
-            buffer.GetLength(),
+            data,
+            data_size,
             signature.get(),
             timeout,
             argv,
@@ -105,7 +109,9 @@ InternalTransaction HotwalletApi::charge(
         );
         ret.from_obj(res["params"].GetObject());
         ret.account = string(account);
+        delete[] data;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
     
@@ -130,7 +136,8 @@ InternalTransaction HotwalletApi::award(
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+    size_t data_size;
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/hotwallet/award";
     size_t path_size = 16;
@@ -141,8 +148,8 @@ InternalTransaction HotwalletApi::award(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
-                buffer.GetLength(),
+                data,
+                data_size,
                 timestamp()
             )
         );
@@ -152,8 +159,8 @@ InternalTransaction HotwalletApi::award(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
-            buffer.GetLength(),
+            data,
+            data_size,
             signature.get(),
             timeout,
             argv,
@@ -161,7 +168,9 @@ InternalTransaction HotwalletApi::award(
         );
         ret.from_obj(res["params"].GetObject());
         ret.account = string(account);
+        delete[] data;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
     
@@ -183,7 +192,8 @@ HotwalletAllowance HotwalletApi::get_allowance(
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     params.Accept(writer);
 
-    unique_ptr<uint8_t[]> data(to_bytes(buffer.GetString(), buffer.GetLength()));
+    size_t data_size;
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/hotwallet/get_allowance";
     size_t path_size = 24;
@@ -194,8 +204,8 @@ HotwalletAllowance HotwalletApi::get_allowance(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
-                buffer.GetLength(),
+                data,
+                data_size,
                 timestamp()
             )
         );
@@ -205,8 +215,8 @@ HotwalletAllowance HotwalletApi::get_allowance(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
-            buffer.GetLength(),
+            data,
+            data_size,
             signature.get(),
             timeout,
             argv,
@@ -215,7 +225,9 @@ HotwalletAllowance HotwalletApi::get_allowance(
 
         ret.from_obj(res["params"].GetObject());
         ret.account = string(account);
+        delete[] data;
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
     

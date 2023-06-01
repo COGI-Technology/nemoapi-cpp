@@ -20,7 +20,7 @@ rapidjson::Document::Array NemoAccountApi::get_link(
     params.AddMember("main_account", _main_account, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/account/get_link";
     size_t path_size = 17;
@@ -30,7 +30,7 @@ rapidjson::Document::Array NemoAccountApi::get_link(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -41,15 +41,17 @@ rapidjson::Document::Array NemoAccountApi::get_link(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["params"].GetArray();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -67,7 +69,7 @@ rapidjson::Document::Object NemoAccountApi::get_nemo_wallet(
     params.AddMember("sub_account", _sub_account, allocator);
     
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/account/get_nemo_wallet";
     size_t path_size = 24;
@@ -77,7 +79,7 @@ rapidjson::Document::Object NemoAccountApi::get_nemo_wallet(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -88,15 +90,17 @@ rapidjson::Document::Object NemoAccountApi::get_nemo_wallet(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["params"].GetObject();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }

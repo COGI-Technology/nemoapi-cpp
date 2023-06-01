@@ -25,7 +25,7 @@ string NFTApi::mint(
     params.AddMember("data", metadata, allocator);
 
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/nft/mint";
     size_t path_size = 9;
@@ -35,7 +35,7 @@ string NFTApi::mint(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -46,15 +46,17 @@ string NFTApi::mint(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
+        delete[] data;
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
@@ -77,7 +79,7 @@ string NFTApi::request_mint(
     params.AddMember("data", metadata, allocator);
     
     size_t data_size;
-    unique_ptr<uint8_t[]> data(json_decode(params, &data_size));
+    uint8_t* data = json_decode(params, &data_size);
 
     uint8_t resource_path[] = "/nft/request_mint";
     size_t path_size = 17;
@@ -87,7 +89,7 @@ string NFTApi::request_mint(
             client_->sign(
                 resource_path,
                 path_size,
-                data.get(),
+                data,
                 data_size,
                 timestamp()
             )
@@ -98,16 +100,17 @@ string NFTApi::request_mint(
             path_size,
             NEMOAPI_POST,
             NemoApiV2Auth,
-            data.get(),
+            data,
             data_size,
             signature.get(),
             timeout,
             argv,
             argc
         );
-
+        delete[] data;
         return res["uuid"].GetString();
     } catch (const std::exception& e) {
+        delete[] data;
         throw;
     }
 }
