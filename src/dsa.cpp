@@ -1,100 +1,94 @@
-#include "nemoapi.h"
+#include <nemoapi/dsa.h>
+#include <nemoapi/logging.h>
 
-namespace Nemo
+namespace nemoapi
 {
-EDDSA::EDDSA(const uint8_t* prv, const uint8_t* pub):
-    prv_(new uint8_t[PRV_SIZE])
-    ,pub_(new uint8_t[PUB_SIZE])
-    ,sk_(new uint8_t[SK_SIZE])
+eddsa::eddsa(const uint8_t* prv, const uint8_t* pub):
+    _prv(new uint8_t[eddsa_PRV_SIZE])
+    ,_pub(new uint8_t[eddsa_PUB_SIZE])
+    ,_sk(new uint8_t[eddsa_SK_SIZE])
 {
     if(prv != nullptr){
-        memcpy(prv_, prv, PRV_SIZE);
-        crypto_sign_seed_keypair(pub_, sk_, prv_);
+        memmove(_prv, prv, eddsa_PRV_SIZE);
+        crypto_sign_seed_keypair(_pub, _sk, _prv);
         return;
     }
 
     if(pub != nullptr){
-        memcpy(pub_, pub, PUB_SIZE);
+        memmove(_pub, pub, eddsa_PUB_SIZE);
     }
 
-    _assert(prv != nullptr || pub != nullptr, "Invalid prv, pub");
+    if(prv != nullptr || pub != nullptr){
+        LOG_FATAL << "Invalid prv, pub";
+    }
 }
 
-EDDSA::~EDDSA() {
-    delete[] prv_;
-    delete[] pub_;
-    delete[] sk_;
-
-    prv_ = nullptr;
-    pub_ = nullptr;
-    sk_ = nullptr;
+eddsa::~eddsa() {
+    delete[] _prv;
+    delete[] _pub;
+    delete[] _sk;
 }
 
-EDDSA* EDDSA::from_prv(const uint8_t* prv){
-    return new EDDSA(prv);
+eddsa* eddsa::from_prv(const uint8_t* prv){
+    return new eddsa(prv);
 }
 
-EDDSA* EDDSA::from_pub(const uint8_t* pub){
-    return new EDDSA(nullptr, pub);
+eddsa* eddsa::from_pub(const uint8_t* pub){
+    return new eddsa(nullptr, pub);
 }
 
-string EDDSA::prv_as_base64(){
-    return base64_encode(prv_, PRV_SIZE);
+std::string eddsa::prv_as_base64(){
+    return base64_encode(_prv, eddsa_PRV_SIZE);
 }
 
-string EDDSA::pub_as_base64(){
-    return base64_encode(pub_, PUB_SIZE);
+std::string eddsa::pub_as_base64(){
+    return base64_encode(_pub, eddsa_PUB_SIZE);
 }
 
-void EDDSA::sign(const uint8_t* m, size_t m_len, uint8_t* s, size_t* s_len){
-    *s_len = S_SIZE;
-    if (s == nullptr)
-        return;
-
-    uint8_t* mh = new uint8_t[MH_SIZE];
+bool eddsa::sign(const uint8_t* m, size_t m_len, uint8_t* s, size_t s_len){
+    if (s_len != eddsa_S_SIZE){
+        LOG_ERROR << "Failed s_len:" << s_len;
+        return false;
+    }
+    uint8_t* mh = new uint8_t[eddsa_MH_SIZE];
 
     if (crypto_hash_sha256(mh, (const unsigned char *) m, m_len) < 0) {
         delete[] mh;
-        _assert(false, "Failed crypto_hash_sha256");
+        LOG_ERROR << "Failed crypto_hash_sha256";
+        return false;
     }
-        
-    unsigned long long sm_size = S_SIZE + MH_SIZE;
-    uint8_t* sm = new uint8_t[sm_size];
 
-    if (crypto_sign(sm, &sm_size, mh, (unsigned long long)MH_SIZE, sk_) < 0) {
+    auto s_len_p = (unsigned long long)s_len;
+    if (crypto_sign_detached(s, &s_len_p, mh, (unsigned long long)eddsa_MH_SIZE, _sk) < 0) {
         delete[] mh;
-        delete[] sm;
-        _assert(false, "Failed crypto_sign");
+        LOG_FATAL << "Failed crypto_sign";
+        return false;
     }
-
-    s = (uint8_t*)realloc(s, S_SIZE);
-    memcpy(s, sm, S_SIZE);
     delete[] mh;
-    delete[] sm;
+    return true;
 }
 
-bool EDDSA::verify(const uint8_t* m, size_t m_len, const uint8_t* s, size_t s_len){
-    if (s_len != S_SIZE)
+bool eddsa::verify(const uint8_t* m, size_t m_len, const uint8_t* s, size_t s_len){
+    if (s_len != eddsa_S_SIZE){
+        LOG_ERROR << "Failed s_len:" << s_len;
         return false;
-    unsigned long long mh_size = MH_SIZE;
-    uint8_t* mh = new uint8_t[MH_SIZE];
+    }
+    uint8_t* mh = new uint8_t[eddsa_MH_SIZE];
     if (crypto_hash_sha256(mh, m, (unsigned long long)m_len) < 0) {
         delete[] mh;
-        _assert(false, "Failed crypto_hash_sha256");
+        LOG_ERROR << "Failed crypto_hash_sha256";
+        return false;
     }
-    uint8_t* sm = new uint8_t[S_SIZE + mh_size];
-    memcpy(sm, s, S_SIZE);
-    memcpy(sm+S_SIZE, mh, m_len);
-    bool ret = crypto_sign_open(mh, &mh_size, sm, S_SIZE + MH_SIZE, pub_) > 0;
+
+    bool ret = crypto_sign_verify_detached(s, mh, m_len, _pub) != 0;
     delete[] mh;
-    delete[] sm;
     return ret;
 }
 
-EDDSA* EDDSA::generate(){
-    uint8_t* buf = new uint8_t[PRV_SIZE];
-    randombytes_buf(buf, PRV_SIZE);
-    EDDSA* ret = EDDSA::from_prv(buf);
+eddsa* eddsa::generate(){
+    uint8_t* buf = new uint8_t[eddsa_PRV_SIZE];
+    randombytes_buf(buf, eddsa_PRV_SIZE);
+    eddsa* ret = eddsa::from_prv(buf);
     delete[] buf;
     return ret;
 }

@@ -1,14 +1,23 @@
-#include "nemoapi.h"
+#include <nemoapi/nemoapi.h>
 
-using namespace Nemo;
+using namespace nemoapi;
 
+bool hotwallet_award(rest::hotwallet_ptr client) {
+    const std::string account("0x48b1747b7221c894f1548740435d5d54377e422d");
+    const std::string amount("1.1");
 
-void hotwallet_award(HotwalletApi* client) {
-    const string account("0x48b1747b7221c894f1548740435d5d54377e422d");
-    const string amount("1.1");
-
-    auto res = client->balance(account.c_str());
-    printf("before: %s\n", res.balance.c_str());
-    InternalTransaction after = client->award(account.c_str(), amount.c_str());
-    printf("tx hash: %s\nbalance: %s\n", after.tx_hash.c_str(), after.balance.c_str());
+    return client->balance(std::move(account), [=](status_e status, rest::err_t&& err, rest::hotwallet_balance_t&& res){
+        if (status != normal) {
+            LOG_ERROR << "get balance error: status=" << status << ", err=" << err;
+            return false;
+        }
+        LOG_DEBUG << res;
+        return client->award(std::move(account), std::move(amount), [](status_e status, rest::err_t&& err, rest::hotwallet_award_t&& res){
+            if(status != normal){
+                LOG_ERROR << "award error: status=" << status << ", err=" << err;
+            }
+            LOG_DEBUG << res;
+            return true;
+        });
+    });
 }
