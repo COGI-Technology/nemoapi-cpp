@@ -6,6 +6,10 @@ option(ASYNC "Build async" OFF)
 include_directories(./include)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAPIDJSON_CXX_FLAGS}")
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+find_package(rapidjson REQUIRED)
+
 include_directories(${RAPIDJSON_INCLUDE_DIRS})
 
 if (UNIX)
@@ -66,5 +70,3 @@ message (STATUS "EXECUTABLE_OUTPUT_PATH " ${EXECUTABLE_OUTPUT_PATH})
 
 add_subdirectory (src)
 add_subdirectory (examples)
-
-set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
