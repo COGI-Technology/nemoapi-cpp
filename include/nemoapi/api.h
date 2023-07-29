@@ -118,6 +118,143 @@ class nft : public base {
 
 using nft_ptr = std::shared_ptr<nft>;
 
+class land : public base {
+    public:
+        land(client* c): base(c) {};
+        ~land(){};
+    public:
+        bool mint(
+            const std::string recipient,
+            const std::string land_id,
+            const std::string level,
+            const std::string land_x,
+            const std::string land_y,
+            const rapidjson::Document::Object metadata,
+            const std::string callback,
+            result_cb<land_mint_t>&& cb,
+            const std::time_t timeout = 300L            
+        );
+        bool request_mint(
+            const std::string recipient,
+            const std::string land_id,
+            const std::string level,
+            const std::string land_x,
+            const std::string land_y,
+            const rapidjson::Document::Object metadata,
+            const std::string callback,
+            result_cb<land_request_mint_t>&& cb,
+            const std::time_t timeout = 300L            
+        );
+        bool mints(
+            const rapidjson::Document::Array lands,
+            result_cb<land_mints_t>&& cb,
+            const std::time_t timeout = 300L 
+        );
+        bool request_mints(
+            const rapidjson::Document::Array lands,
+            result_cb<land_request_mints_t>&& cb,
+            const std::time_t timeout = 300L 
+        );
+        bool request_cancelbuys(
+            const rapidjson::Document::Array lands,
+            result_cb<land_request_cancelbuys_t>&& cb,
+            const std::time_t timeout = 300L 
+        );
+};
+
+using land_ptr = std::shared_ptr<land>;
+
+class mysterybox : public base {
+    public:
+        mysterybox(client* c): base(c) {};
+        ~mysterybox(){};
+    public:
+        bool mint(
+            const std::string recipient,
+            const std::string box_id,
+            const rapidjson::Document::Object metadata,
+            const std::string callback,
+            result_cb<mysterybox_mint_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool mints(
+            const rapidjson::Document::Array boxes,
+            result_cb<mysterybox_mints_t>&& cb,
+            const std::time_t timeout = 300L 
+        );
+};
+
+using mysterybox_ptr = std::shared_ptr<mysterybox>;
+
+class nemoaccount : public base {
+    public:
+        nemoaccount(client* c): base(c) {};
+        ~nemoaccount(){};
+    public:
+        bool get_link(
+            const std::string main_account,
+            result_cb<nemoaccount_get_link_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool get_nemo_wallet(
+            const std::string sub_account,
+            result_cb<nemoaccount_get_nemo_wallet_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+};
+
+using nemoaccount_ptr = std::shared_ptr<nemoaccount>;
+
+class bridge : public base {
+    public:
+        bridge(client* c): base(c) {};
+        ~bridge(){};
+    public:
+        bool pause(
+            const rapidjson::Document::Array networks,
+            result_cb<bridge_pause_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool unpause(
+            const rapidjson::Document::Array networks,
+            result_cb<bridge_unpause_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool block_token(
+            const std::string token,
+            const std::string network,
+            result_cb<bridge_block_token_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool unblock_token(
+            const std::string token,
+            const std::string network,
+            result_cb<bridge_unblock_token_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+};
+
+using bridge_ptr = std::shared_ptr<bridge>;
+
+class subgraph : public base {
+    public:
+        subgraph(client* c): base(c) {};
+        ~subgraph(){};
+    public:
+        bool call(
+            const rapidjson::Document::Object variables,
+            result_cb<subgraph_call_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+        bool get_total_volume(
+            const rapidjson::Document::Object variables,
+            result_cb<subgraph_get_total_volume_t>&& cb,
+            const std::time_t timeout = 300L
+        );
+};
+
+using subgraph_ptr = std::shared_ptr<subgraph>;
+
 } //namespace rest
 } //namespace nemoapi
 

@@ -169,5 +169,231 @@ std::ostream &operator<<(std::ostream &os, const nft_mint_t &o){
     return os;
 }
 
+land_mints_response_t land_mints_response_t::from_obj(const rapidjson::Document::Object obj) {
+    land_mints_response_t ret{};
+    ret.landid = obj["landid"].GetString();
+    ret.uuid = obj["uuid"].GetString();
+    ret.status = obj["status"].GetInt();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const land_mints_response_t &o) {
+    os
+    << "{"
+    << "\"landid\":" << o.landid
+    << ",\"uuid\":" << o.uuid
+    << ",\"status\":" << o.status
+    << "}";
+    return os;
+}
+
+land_mints_t land_mints_t::from_obj(const rapidjson::Document::Object obj) {
+    land_mints_t ret{};
+    for (auto& e: obj["uuid"].GetArray()) {
+        ret.uuids.push_back(land_mints_response_t::from_obj(e.GetObject()));
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const land_mints_t &o) {
+    os
+    << "[";
+        for (auto it = o.uuids.begin(); it != o.uuids.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.uuids.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
+land_request_cancelbuys_response_t land_request_cancelbuys_response_t::from_obj(const rapidjson::Document::Object obj) {
+    land_request_cancelbuys_response_t ret{};
+    ret.cid = obj["cid"].GetString();
+    ret.status = obj["status"].GetInt();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_response_t &o) {
+    os
+    << "{"
+    << "\"cid\":" << o.cid
+    << ",\"status\":" << o.status
+    << "}";
+    return os;
+}
+
+land_request_cancelbuys_t land_request_cancelbuys_t::from_obj(const rapidjson::Document::Array obj) {
+    land_request_cancelbuys_t ret{};
+    for (auto& e: obj) {
+        ret.cids.push_back(land_request_cancelbuys_response_t::from_obj(e.GetObject()));
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_t &o) {
+    os
+    << "[";
+        for (auto it = o.cids.begin(); it != o.cids.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.cids.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
+mysterybox_mints_response_t mysterybox_mints_response_t::from_obj(const rapidjson::Document::Object obj) {
+    mysterybox_mints_response_t ret{};
+    ret.boxid = obj["boxid"].GetString();
+    ret.uuid = obj["uuid"].GetString();
+    ret.status = obj["status"].GetInt();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const mysterybox_mints_response_t &o) {
+    os
+    << "{"
+    << "\"boxid\":" << o.boxid
+    << ",\"uuid\":" << o.uuid
+    << ",\"status\":" << o.status
+    << "}";
+    return os;
+}
+
+mysterybox_mints_t mysterybox_mints_t::from_obj(const rapidjson::Document::Object obj) {
+    mysterybox_mints_t ret{};
+    for (auto& e: obj["uuid"].GetArray()) {
+        ret.uuids.push_back(mysterybox_mints_response_t::from_obj(e.GetObject()));
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const mysterybox_mints_t &o) {
+    os
+    << "[";
+        for (auto it = o.uuids.begin(); it != o.uuids.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.uuids.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
+nemoaccount_get_link_t nemoaccount_get_link_t::from_obj(const rapidjson::Document::Object obj) {
+    nemoaccount_get_link_t ret{};
+    for (auto& e: obj["params"].GetArray()) {
+        ret.accounts.push_back(e.GetString());
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const nemoaccount_get_link_t &o) {
+    os
+    << "[";
+        for (auto it = o.accounts.begin(); it != o.accounts.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.accounts.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const nemoaccount_get_nemo_wallet_t &o){
+    os
+    << "{"
+    << "\"nemo_wallet\":" << o.nemo_wallet
+    << "}";
+    return os;
+}
+
+nemoaccount_get_nemo_wallet_t nemoaccount_get_nemo_wallet_t::from_obj(const rapidjson::Document::Object obj) {
+    nemoaccount_get_nemo_wallet_t ret{};
+    ret.nemo_wallet = obj["nemo_wallet"].GetString();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const bridge_pause_response_t &o) {
+    os
+    << "{"
+    << "\"namespace\":" << o._namespace
+    << ",\"status\":" << o.status
+    << ",\"params\":" << o.params
+    << "}";
+    return os;
+}
+
+bridge_pause_response_t bridge_pause_response_t::from_obj(const rapidjson::Document::Object obj) {
+    bridge_pause_response_t ret{};
+    ret._namespace = obj["namespace"].GetString();
+    ret.status = obj["status"].GetInt();
+    ret.params = obj["params"].GetString();
+    return ret;
+}
+
+bridge_pause_t bridge_pause_t::from_obj(const rapidjson::Document::Object obj) {
+    bridge_pause_t ret{};
+    for (auto& e: obj["params"].GetArray()) {
+        ret.responses.push_back(bridge_pause_response_t::from_obj(e.GetObject()));
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const bridge_pause_t &o) {
+    os
+    << "[";
+        for (auto it = o.responses.begin(); it != o.responses.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.responses.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
+subgraph_call_t subgraph_call_t::from_obj(const rapidjson::Document::Object obj) {
+    subgraph_call_t ret{};
+    rapidjson::Document document(rapidjson::kObjectType);
+    auto& allocator = document.GetAllocator();
+    document.AddMember("data", obj["data"].GetObject(), allocator);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+
+    ret.data = buffer.GetString();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const subgraph_call_t &o) {
+    os << o.data;
+    return os;
+}
+
+subgraph_get_total_volume_t subgraph_get_total_volume_t::from_obj(const rapidjson::Document::Object obj) {
+    subgraph_get_total_volume_t ret{};
+    ret.totalvolumn = obj["totalvolumn"].GetString();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const subgraph_get_total_volume_t &o) {
+    os
+    << "{"
+    << "\"totalvolumn\":" << o.totalvolumn
+    << "}";
+    return os;
+}
+
 } //namespace rest
 } //namespace nemoapi

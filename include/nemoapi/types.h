@@ -101,6 +101,100 @@ struct nft_mint_t {
 //api/nft.md#request_mint
 using nft_request_mint_t = nft_mint_t;
 
+using land_mint_t = nft_mint_t;
+using land_request_mint_t = nft_mint_t;
+
+struct land_mints_response_t {
+    std::string landid;
+    std::string uuid;
+    int status;
+    static land_mints_response_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const land_mints_response_t &f);
+};
+
+using land_request_mints_response_t = land_mints_response_t;
+struct land_mints_t {
+    std::vector<land_mints_response_t> uuids;
+    static land_mints_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const land_mints_t &f);
+};
+using land_request_mints_t = land_mints_t;
+
+struct land_request_cancelbuys_response_t {
+    std::string cid;
+    int status;
+    static land_request_cancelbuys_response_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_response_t &f);
+};
+struct land_request_cancelbuys_t {
+    std::vector<land_request_cancelbuys_response_t> cids;
+    static land_request_cancelbuys_t from_obj(const rapidjson::Document::Array obj);
+    friend std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_t &f);
+};
+
+// mysterybox
+using mysterybox_mint_t = nft_mint_t;
+struct mysterybox_mints_response_t {
+    std::string boxid;
+    std::string uuid;
+    int status;
+    static mysterybox_mints_response_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const mysterybox_mints_response_t &f);
+};
+struct mysterybox_mints_t {
+    std::vector<mysterybox_mints_response_t> uuids;
+    static mysterybox_mints_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const mysterybox_mints_t &f);
+};
+
+// nemoaccount
+struct nemoaccount_get_link_t {
+    std::vector<std::string> accounts;
+    static nemoaccount_get_link_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const nemoaccount_get_link_t &f);
+};
+struct nemoaccount_get_nemo_wallet_t {
+    std::string nemo_wallet;
+    static nemoaccount_get_nemo_wallet_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const nemoaccount_get_nemo_wallet_t &f);
+};
+
+// bridge
+struct bridge_pause_response_t {
+    std::string _namespace;
+    int status;
+    std::string params;
+    static bridge_pause_response_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const bridge_pause_response_t &f);
+};
+
+using bridge_unpause_response_t = bridge_pause_response_t;
+
+struct bridge_pause_t {
+    std::vector<bridge_pause_response_t> responses;
+    static bridge_pause_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const bridge_pause_t &f);
+};
+
+using bridge_unpause_t = bridge_pause_t;
+
+using bridge_block_token_response_t = bridge_pause_response_t;
+using bridge_unblock_token_response_t = bridge_pause_response_t;
+using bridge_block_token_t = bridge_pause_t;
+using bridge_unblock_token_t = bridge_pause_t;
+
+//subgraph
+struct subgraph_call_t {
+    std::string data;
+    static subgraph_call_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const subgraph_call_t &f);
+};
+struct subgraph_get_total_volume_t {
+    std::string totalvolumn;
+    static subgraph_get_total_volume_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const subgraph_get_total_volume_t &f);
+};
+
 } //namespace rest
 } //namespace nemoapi
 

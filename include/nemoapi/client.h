@@ -98,7 +98,11 @@ bool client::make_response(const char* raw, result_cb<T>&& cb){
         cb(normal, std::move(err_t{nullptr}), std::move(T::from_obj(response.GetObject())));
         return true;
     }
-    cb(normal, std::move(err_t{nullptr}), std::move(T::from_obj(response["params"].GetObject())));
+    if (response["params"].IsObject()) {
+        cb(normal, std::move(err_t{nullptr}), std::move(T::from_obj(response["params"].GetObject())));
+    } else {
+        cb(normal, std::move(err_t{nullptr}), std::move(T::from_obj(response.GetObject())));
+    }
     return true;
 }
 
