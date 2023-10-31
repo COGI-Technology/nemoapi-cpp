@@ -169,6 +169,44 @@ std::ostream &operator<<(std::ostream &os, const nft_mint_t &o){
     return os;
 }
 
+nft_mints_response_t nft_mints_response_t::from_obj(const rapidjson::Document::Object obj) {
+    nft_mints_response_t ret{};
+    ret.uuid = obj["uuid"].GetString();
+    ret.status = obj["status"].GetInt();
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const nft_mints_response_t &o) {
+    os
+    << "{"
+    << "\"uuid\":" << o.uuid
+    << ",\"status\":" << o.status
+    << "}";
+    return os;
+}
+
+nft_mints_t nft_mints_t::from_obj(const rapidjson::Document::Object obj) {
+    nft_mints_t ret{};
+    for (auto& e: obj["data"].GetArray()) {
+        ret.uuids.push_back(nft_mints_response_t::from_obj(e.GetObject()));
+    }
+    return ret;
+}
+
+std::ostream &operator<<(std::ostream &os, const nft_mints_t &o) {
+    os
+    << "[";
+        for (auto it = o.uuids.begin(); it != o.uuids.end(); ++it) {
+            os << *it;
+            if (std::next(it) != o.uuids.end()) {
+                os << ",";
+            }
+        }
+    os
+    << "]";
+    return os;
+}
+
 land_mints_response_t land_mints_response_t::from_obj(const rapidjson::Document::Object obj) {
     land_mints_response_t ret{};
     ret.landid = obj["landid"].GetString();
@@ -239,46 +277,6 @@ std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_t &o) {
         for (auto it = o.cids.begin(); it != o.cids.end(); ++it) {
             os << *it;
             if (std::next(it) != o.cids.end()) {
-                os << ",";
-            }
-        }
-    os
-    << "]";
-    return os;
-}
-
-mysterybox_mints_response_t mysterybox_mints_response_t::from_obj(const rapidjson::Document::Object obj) {
-    mysterybox_mints_response_t ret{};
-    ret.boxid = obj["boxid"].GetString();
-    ret.uuid = obj["uuid"].GetString();
-    ret.status = obj["status"].GetInt();
-    return ret;
-}
-
-std::ostream &operator<<(std::ostream &os, const mysterybox_mints_response_t &o) {
-    os
-    << "{"
-    << "\"boxid\":" << o.boxid
-    << ",\"uuid\":" << o.uuid
-    << ",\"status\":" << o.status
-    << "}";
-    return os;
-}
-
-mysterybox_mints_t mysterybox_mints_t::from_obj(const rapidjson::Document::Object obj) {
-    mysterybox_mints_t ret{};
-    for (auto& e: obj["uuid"].GetArray()) {
-        ret.uuids.push_back(mysterybox_mints_response_t::from_obj(e.GetObject()));
-    }
-    return ret;
-}
-
-std::ostream &operator<<(std::ostream &os, const mysterybox_mints_t &o) {
-    os
-    << "[";
-        for (auto it = o.uuids.begin(); it != o.uuids.end(); ++it) {
-            os << *it;
-            if (std::next(it) != o.uuids.end()) {
                 os << ",";
             }
         }

@@ -134,6 +134,23 @@ bool nft::mint(
     return make_request(std::move(resource_path), std::move(cb), std::move(data), timeout);
 }
 
+bool nft::mints(
+    const rapidjson::Document::Array nfts,
+    result_cb<nft_mints_t>&& cb,
+    const std::time_t timeout
+) {
+    rapidjson::Document params(rapidjson::kArrayType);
+    auto& allocator = params.GetAllocator();
+    for (auto& value: nfts) {
+        params.PushBack(value, allocator);
+    }
+
+    const std::string data = json_encode(params);
+    const std::string resource_path = "/v2/nft/mints";
+    
+    return make_request(std::move(resource_path), std::move(cb), std::move(data), timeout);
+}
+
 bool nft::request_mint(
     const std::string recipient,
     const rapidjson::Document::Object metadata,
@@ -233,42 +250,6 @@ bool land::request_mints(
 
     const std::string data = json_encode(params);
     const std::string resource_path = "/v2/land/request_mints";
-    
-    return make_request(std::move(resource_path), std::move(cb), std::move(data), timeout);
-}
-
-bool mysterybox::mint(
-    const std::string recipient,
-    const std::string box_id,
-    const rapidjson::Document::Object metadata,
-    const std::string callback,
-    result_cb<mysterybox_mint_t>&& cb,
-    const std::time_t timeout  
-) {
-    rapidjson::Document params(rapidjson::kObjectType);
-    auto& allocator = params.GetAllocator();
-    params.AddMember("recipient", rapidjson::Value(recipient.c_str(), allocator), allocator);
-    params.AddMember("boxid", rapidjson::Value(recipient.c_str(), allocator), allocator);
-    params.AddMember("callback", rapidjson::Value(callback.c_str(), allocator), allocator);
-    params.AddMember("data", metadata, allocator);
-
-    const std::string data = json_encode(params);
-    const std::string resource_path = "/v2/mysterybox/mint";
-    
-    return make_request(std::move(resource_path), std::move(cb), std::move(data), timeout);
-}
-
-bool mysterybox::mints(
-    const rapidjson::Document::Array boxes,
-    result_cb<mysterybox_mints_t>&& cb,
-    const std::time_t timeout  
-) {
-    rapidjson::Document params(rapidjson::kObjectType);
-    auto& allocator = params.GetAllocator();
-    params.AddMember("boxs", boxes, allocator);
-
-    const std::string data = json_encode(params);
-    const std::string resource_path = "/v2/mysterybox/mints";
     
     return make_request(std::move(resource_path), std::move(cb), std::move(data), timeout);
 }

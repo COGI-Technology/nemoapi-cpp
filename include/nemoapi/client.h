@@ -61,6 +61,13 @@ bool client::make_response(const char* raw, result_cb<T>&& cb){
     rapidjson::Document response;
     response.Parse(raw);
 
+    if (response.IsArray()) {
+        rapidjson::Value obj(rapidjson::kObjectType);
+        obj.AddMember("data", response.GetArray(), response.GetAllocator());
+        cb(normal, std::move(err_t{nullptr}), std::move(T::from_obj(obj.GetObject())));
+        return true;
+    }
+
     if(!response.IsObject()){
         T res{};
         cb(something_wrong, std::move(err_t{raw}), std::move(res));

@@ -101,6 +101,19 @@ struct nft_mint_t {
 //api/nft.md#request_mint
 using nft_request_mint_t = nft_mint_t;
 
+//api/nft.md#mints
+struct nft_mints_response_t {
+    std::string uuid;
+    int status;
+    static nft_mints_response_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const nft_mints_response_t &f);
+};
+struct nft_mints_t {
+    std::vector<nft_mints_response_t> uuids;
+    static nft_mints_t from_obj(const rapidjson::Document::Object obj);
+    friend std::ostream &operator<<(std::ostream &os, const nft_mints_t &f);
+};
+
 using land_mint_t = nft_mint_t;
 using land_request_mint_t = nft_mint_t;
 
@@ -130,21 +143,6 @@ struct land_request_cancelbuys_t {
     std::vector<land_request_cancelbuys_response_t> cids;
     static land_request_cancelbuys_t from_obj(const rapidjson::Document::Array obj);
     friend std::ostream &operator<<(std::ostream &os, const land_request_cancelbuys_t &f);
-};
-
-// mysterybox
-using mysterybox_mint_t = nft_mint_t;
-struct mysterybox_mints_response_t {
-    std::string boxid;
-    std::string uuid;
-    int status;
-    static mysterybox_mints_response_t from_obj(const rapidjson::Document::Object obj);
-    friend std::ostream &operator<<(std::ostream &os, const mysterybox_mints_response_t &f);
-};
-struct mysterybox_mints_t {
-    std::vector<mysterybox_mints_response_t> uuids;
-    static mysterybox_mints_t from_obj(const rapidjson::Document::Object obj);
-    friend std::ostream &operator<<(std::ostream &os, const mysterybox_mints_t &f);
 };
 
 // nemoaccount

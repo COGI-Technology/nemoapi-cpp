@@ -114,6 +114,11 @@ class nft : public base {
             result_cb<nft_request_mint_t>&& cb,
             const std::time_t timeout = 300L            
         );
+        bool mints(
+            const rapidjson::Document::Array nfts,
+            result_cb<nft_mints_t>&& cb,
+            const std::time_t timeout = 300L
+        );
 };
 
 using nft_ptr = std::shared_ptr<nft>;
@@ -163,28 +168,6 @@ class land : public base {
 };
 
 using land_ptr = std::shared_ptr<land>;
-
-class mysterybox : public base {
-    public:
-        mysterybox(client* c): base(c) {};
-        ~mysterybox(){};
-    public:
-        bool mint(
-            const std::string recipient,
-            const std::string box_id,
-            const rapidjson::Document::Object metadata,
-            const std::string callback,
-            result_cb<mysterybox_mint_t>&& cb,
-            const std::time_t timeout = 300L
-        );
-        bool mints(
-            const rapidjson::Document::Array boxes,
-            result_cb<mysterybox_mints_t>&& cb,
-            const std::time_t timeout = 300L 
-        );
-};
-
-using mysterybox_ptr = std::shared_ptr<mysterybox>;
 
 class nemoaccount : public base {
     public:
